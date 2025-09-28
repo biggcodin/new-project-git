@@ -1,0 +1,17 @@
+@font-face {
+    font-family: "IRANSansWeb";
+    src: url("../fonts/IranSansWeb/IRANSansWeb.eot"); /* IE */
+    src: url("../fonts/IranSansWeb/IRANSansWeb.eot?#iefix") format("embedded-opentype"), /* IE */
+    url("../fonts/IranSansWeb/IRANSansWeb.woff") format("woff"), /* Modern Browsers */
+    url("../fonts/IranSansWeb/IRANSansWeb.ttf") format("truetype"); /* Safari, Android, iOS */
+    font-weight: bold;
+}
+
+@font-face {
+    font-family: "Kalameh";
+    src: url("../fonts/kalameh/kalameh.eot"); /* IE */
+    src: url("../fonts/kalameh/kalameh.eot?#iefix") format("embedded-opentype"), /* IE */
+    url("../fonts/kalameh/kalameh.woff") format("woff"), /* Modern Browsers */
+    url("../fonts/kalameh/kalameh.ttf") format("truetype"); /* Safari, Android, iOS */
+    font-weight: bold;
+}

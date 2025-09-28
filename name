@@ -1,0 +1,1 @@
+"Product user name (with eager loading): " . ($product- ? $product- : 'Null') . "\n";
