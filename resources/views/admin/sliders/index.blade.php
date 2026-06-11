@@ -454,7 +454,13 @@
     <div class="container">
         <div class="page-header">
             <h2>مدیریت اسلایدرها</h2>
+
+            <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+                <i class="fas fa-tachometer-alt"></i>
+                بازگشت به داشبورد
+            </a>
         </div>
+
 
         <!-- دکمه افزودن اسلایدر -->
         <div style="margin-bottom: 20px;">

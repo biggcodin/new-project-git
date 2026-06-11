@@ -14,7 +14,7 @@ class ProductApprovalController extends Controller
         $pendingProducts = Product::with(['user', 'subSubcategory'])
             ->where('status', 'pending')
             ->latest()
-            ->get();
+            ->paginate(10);
 
         return view('admin.pending-products', compact('pendingProducts'));
     }

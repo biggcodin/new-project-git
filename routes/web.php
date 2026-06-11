@@ -79,11 +79,13 @@ Route::post('/articles/{article}/comments', [CommentController::class, 'store'])
 // 🛠 مسیرهای پنل مدیریت
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [HomeController::class, 'adminDashboard'])->name('dashboard');
-    
+
     Route::get('/pending-products', [ProductApprovalController::class, 'index'])->name('pending.products');
+
+    // عملیات تایید و رد
     Route::post('/pending-products/{product}/approve', [ProductApprovalController::class, 'approve'])->name('pending.products.approve');
     Route::post('/pending-products/{product}/reject', [ProductApprovalController::class, 'reject'])->name('pending.products.reject');
-    
+
     Route::get('/pending-users', [UserApprovalController::class, 'pendingIndex'])->name('pending.users');
     Route::post('/pending-users/{user}/approve', [UserApprovalController::class, 'approve'])->name('pending.users.approve');
     Route::post('/pending-users/{user}/reject', [UserApprovalController::class, 'reject'])->name('pending.users.reject');

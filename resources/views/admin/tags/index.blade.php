@@ -395,6 +395,7 @@
     <div class="container">
         <div class="page-header">
             <h1>مدیریت برچسب‌ها</h1>
+            
         </div>
 
         <!-- دکمه افزودن برچسب -->
@@ -403,7 +404,12 @@
                 <i class="fas fa-plus"></i>
                 افزودن برچسب جدید
             </button>
+            <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+    <i class="fas fa-tachometer-alt"></i>
+    بازگشت به داشبورد
+</a>
         </div>
+        
 
         <!-- جدول برچسب‌ها -->
         <div class="table-wrapper">

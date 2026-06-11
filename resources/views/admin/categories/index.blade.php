@@ -419,6 +419,11 @@
             <h2>مدیریت دسته‌ها، زیردسته‌ها و زیردسته دوم‌ها</h2>
         </div>
 
+        <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+    <i class="fas fa-tachometer-alt"></i>
+    بازگشت به داشبورد
+</a>
+
         @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif

@@ -695,6 +695,13 @@
                 افزودن محصول جدید
             </a>
         </div>
+        <div class="page-header">
+            <h1>مدیریت محصولات</h1>
+            <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+                <i class="fas fa-tachometer-alt"></i>
+                بازگشت به داشبورد
+            </a>
+        </div>
 
         @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
@@ -752,8 +759,10 @@
                     </select>
                 </div>
                 <div class="filter-buttons">
-                    <button type="submit" class="btn-custom btn-primary-custom"><i class="fas fa-search"></i> جستجو</button>
-                    <a href="{{ route('admin.products.index') }}" class="btn-custom btn-secondary-custom"><i class="fas fa-times"></i> پاک کردن</a>
+                    <button type="submit" class="btn-custom btn-primary-custom"><i class="fas fa-search"></i>
+                        جستجو</button>
+                    <a href="{{ route('admin.products.index') }}" class="btn-custom btn-secondary-custom"><i
+                            class="fas fa-times"></i> پاک کردن</a>
                 </div>
             </form>
         </div>
@@ -785,8 +794,8 @@
                                 <td>{{ $product->id }}</td>
                                 <td>
                                     @if ($product->cover)
-                                        <img src="{{ asset('storage/' . $product->cover) }}" alt="{{ $product->name }}"
-                                            class="product-image"
+                                        <img src="{{ asset('storage/' . $product->cover) }}"
+                                            alt="{{ $product->name }}" class="product-image"
                                             onclick="showImageModal('{{ asset('storage/' . $product->cover) }}')"
                                             style="cursor: pointer;">
                                     @elseif($product->media->isNotEmpty())
@@ -863,7 +872,8 @@
                                                 </div>
                                             @endforeach
                                             @if ($product->attributes->count() > 2)
-                                                <div class="more-attributes">+{{ $product->attributes->count() - 2 }} بیشتر</div>
+                                                <div class="more-attributes">+{{ $product->attributes->count() - 2 }}
+                                                    بیشتر</div>
                                             @endif
                                         </div>
                                     @else
@@ -881,7 +891,8 @@
                                                 </span>
                                             @endforeach
                                             @if ($product->tags->count() > 3)
-                                                <div class="more-attributes">+{{ $product->tags->count() - 3 }} بیشتر</div>
+                                                <div class="more-attributes">+{{ $product->tags->count() - 3 }} بیشتر
+                                                </div>
                                             @endif
                                         </div>
                                     @else
@@ -920,7 +931,9 @@
                                                         <i class="fas fa-eye"></i> افزایش بازدید
                                                     </a>
                                                 </li>
-                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
                                                 <li>
                                                     <form action="{{ route('admin.products.destroy', $product) }}"
                                                         method="POST" class="d-inline"
@@ -940,7 +953,8 @@
                         @empty
                             <tr>
                                 <td colspan="13" class="empty-state">
-                                    <i class="fas fa-box-open" style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+                                    <i class="fas fa-box-open"
+                                        style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
                                     <div>هیچ محصولی یافت نشد.</div>
                                 </td>
                             </tr>

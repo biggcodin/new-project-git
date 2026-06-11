@@ -566,6 +566,13 @@
                 افزودن مقاله جدید
             </button>
         </div>
+        <div class="page-header">
+            <h1>مدیریت محصولات</h1>
+        <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+    <i class="fas fa-tachometer-alt"></i>
+    بازگشت به داشبورد
+</a>
+        </div>
 
         <!-- فرم جستجو -->
         <form action="{{ route('articles.index') }}" method="GET" class="search-form">

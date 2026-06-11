@@ -19,7 +19,8 @@ class User extends Model implements Authenticatable
         'phone',
         'password',
         'email_verified_at', // اضافه شده
-        'remember_token'     // اضافه شده
+        'remember_token',
+        'status'     // اضافه شده
     ];
 
     protected $hidden = [
@@ -30,7 +31,8 @@ class User extends Model implements Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed', // هش خودکار پسورد
-        'role' => 'string'      // تضمین نوع داده
+        'role' => 'string'    ,
+         'status' => 'string',  // تضمین نوع داده
     ];
 
     // متد بهبود یافته برای بررسی نقش
