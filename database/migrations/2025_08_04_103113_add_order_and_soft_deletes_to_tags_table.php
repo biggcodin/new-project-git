@@ -7,12 +7,16 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up()
-    {
-        Schema::table('tags', function (Blueprint $table) {
+{
+    Schema::table('tags', function (Blueprint $table) {
+        if (!Schema::hasColumn('tags', 'order')) {
             $table->integer('order')->default(0)->after('status');
+        }
+        if (!Schema::hasColumn('tags', 'deleted_at')) {
             $table->softDeletes()->after('updated_at');
-        });
-    }
+        }
+    });
+}
 
     public function down()
     {

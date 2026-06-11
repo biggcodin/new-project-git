@@ -8,12 +8,16 @@ use Symfony\Component\HttpFoundation\Response;
 
 class AdminMiddleware
 {
-    public function handle(Request $request, Closure $next)
+    public function handle(Request $request, Closure $next): Response
     {
-        if (auth()->check() && auth()->user()->isAdmin()) {
-            return $next($request);
+        if (!auth()->check()) {
+            return redirect()->route('login')->with('error', 'برای دسترسی به پنل مدیریت ابتدا وارد شوید.');
         }
-        abort(403, 'دسترسی غیرمجاز');
+
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'شما دسترسی لازم برای مشاهده این صفحه را ندارید.');
+        }
+
+        return $next($request);
     }
 }
-

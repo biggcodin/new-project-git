@@ -7,11 +7,13 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up()
-    {
-        Schema::table('custom_fields', function (Blueprint $table) {
+{
+    Schema::table('custom_fields', function (Blueprint $table) {
+        if (!Schema::hasColumn('custom_fields', 'deleted_at')) {
             $table->softDeletes()->after('updated_at');
-        });
-    }
+        }
+    });
+}
 
     public function down()
     {

@@ -9,14 +9,18 @@ return new class extends Migration
     public function up()
     {
         Schema::table('sub_subcategories', function (Blueprint $table) {
-            $table->softDeletes();
+            if (!Schema::hasColumn('sub_subcategories', 'deleted_at')) {
+                $table->softDeletes();
+            }
         });
     }
 
     public function down()
     {
         Schema::table('sub_subcategories', function (Blueprint $table) {
-            $table->dropSoftDeletes();
+            if (Schema::hasColumn('sub_subcategories', 'deleted_at')) {
+                $table->dropSoftDeletes();
+            }
         });
     }
 };

@@ -30,6 +30,6 @@ class AppServiceProvider extends ServiceProvider
             return 'شماره تلفن وارد شده معتبر نیست!';
         });
 
-        View::share('allTags', Tag::all());
+        // View::share('allTags', Tag::all());
     }
 }

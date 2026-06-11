@@ -6,35 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 use App\Models\Traits\HasStatusText;
-
+use Illuminate\Support\Facades\Schema;
 class Product extends Model
 {
     use HasFactory, SoftDeletes, HasStatusText;
 
     protected $fillable = [
-        'user_id',
-        'category_id',
-        'subcategory_id',
-        'sub_subcategory_id',
-        'sku',
-        'name',
-        'slug',
-        'description',
-        'meta_title',
-        'meta_description',
-        'cover',
-        'price',
-        'discount_price',
-        'quantity',
-        'status',
-        'featured',
-        'order',
-        'published_at',
-        'views'
+        'user_id', 'category_id', 'subcategory_id', 'sub_subcategory_id',
+        'sku', 'name', 'slug', 'description', 'meta_title', 'meta_description',
+        'cover', 'price', 'discount_price', 'quantity', 'status', 'featured',
+        'order', 'published_at', 'views'
     ];
 
     protected $attributes = [
-        'status' => 'pending', // مقدار پیش‌فرض باید یکی از مقادیر enum باشد
+        'status' => 'pending',
         'featured' => false,
         'order' => 0,
         'views' => 0,
@@ -51,7 +36,6 @@ class Product extends Model
         'published_at' => 'datetime',
         'views' => 'integer'
     ];
-
     // روابط
     public function user()
     {
@@ -99,7 +83,6 @@ class Product extends Model
         if ($this->cover) {
             return asset('storage/' . $this->cover);
         }
-        
         $media = $this->media->first();
         return $media?->url;
     }
@@ -150,7 +133,7 @@ class Product extends Model
         return $value ?: Str::limit(strip_tags($this->description), 160);
     }
 
-    // اسکوپ‌ها (بر اساس مقادیر واقعی enum)
+    // اسکوپ‌ها
     public function scopeActive($query)
     {
         return $query->where('status', 'approved');
@@ -216,7 +199,8 @@ class Product extends Model
         return $query->where('sub_subcategory_id', $subSubcategoryId);
     }
 
-    // متدها (بر اساس مقادیر واقعی enum)
+
+    // متدها
     public function incrementViews()
     {
         $this->increment('views');
@@ -293,37 +277,35 @@ class Product extends Model
         ]);
     }
 
-    // تولید خودکار slug
-    protected static function boot()
+     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($product) {
-            if (empty($product->slug)) {
-                $product->slug = Str::slug($product->name);
-                
-                $originalSlug = $product->slug;
-                $count = 1;
-                
-                while (static::withTrashed()->where('slug', $product->slug)->exists()) {
-                    $product->slug = $originalSlug . '-' . $count;
-                    $count++;
-                }
+            if (empty($product->slug) && Schema::hasColumn('products', 'slug')) {
+                $product->slug = static::generateUniqueSlug($product->name);
             }
         });
-        
+
         static::updating(function ($product) {
-            if ($product->isDirty('name') && empty($product->slug)) {
-                $product->slug = Str::slug($product->name);
-                
-                $originalSlug = $product->slug;
-                $count = 1;
-                
-                while (static::withTrashed()->where('slug', $product->slug)->where('id', '!=', $product->id)->exists()) {
-                    $product->slug = $originalSlug . '-' . $count;
-                    $count++;
-                }
+            if ($product->isDirty('name') && empty($product->slug) && Schema::hasColumn('products', 'slug')) {
+                $product->slug = static::generateUniqueSlug($product->name, $product->id);
             }
         });
+    }
+
+    protected static function generateUniqueSlug($name, $ignoreId = null)
+    {
+        $slug = Str::slug($name);
+        $original = $slug;
+        $i = 1;
+
+        while (static::query()->where('slug', $slug)
+            ->when($ignoreId, fn($q) => $q->where('id', '!=', $ignoreId))
+            ->exists()
+        ) {
+            $slug = $original . '-' . $i++;
+        }
+        return $slug;
     }
 }

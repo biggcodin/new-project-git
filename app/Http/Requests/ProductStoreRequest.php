@@ -6,33 +6,53 @@ use Illuminate\Validation\Rule;
 
 class ProductStoreRequest extends FormRequest
 {
-    // بررسی مجوز دسترسی برای ایجاد محصول
     public function authorize(): bool
     {
-        return $this->user()->can('create', \App\Models\Product::class);
+        return true;
     }
 
-    // قوانین اعتبارسنجی برای ذخیره محصول جدید
     public function rules(): array
     {
         return [
-            'name'               => ['required', 'string', 'max:255'], // نام محصول
-            'slug'               => ['nullable', 'string', 'max:255'], // slug اختیاری
-            'description'        => ['nullable', 'string'],            // توضیحات محصول
-            'meta_title'         => ['nullable', 'string', 'max:255'], // عنوان سئو
-            'meta_description'   => ['nullable', 'string', 'max:255'], // توضیح سئو
-            'price'              => ['required', 'numeric', 'min:0'],  // قیمت اصلی
-            'discount_price'     => ['nullable', 'numeric', 'min:0', 'lt:price'], // قیمت با تخفیف
-            'quantity'           => ['required', 'integer', 'min:0'],  // موجودی انبار
-            'category_id'        => ['required', 'integer', 'exists:categories,id'], // دسته اصلی
-            'subcategory_id'     => ['nullable', 'integer', 'exists:subcategories,id'], // زیر دسته
-            'sub_subcategory_id' => ['nullable', 'integer', 'exists:sub_subcategories,id'], // زیر زیر دسته
-            'sku'                => ['nullable', 'string', 'max:100'], // کد محصول
-            'cover'              => ['nullable', 'image', 'max:2048'], // تصویر اصلی
-            'status'             => ['required', Rule::in(['pending', 'approved', 'rejected'])], // وضعیت انتشار
-            'featured'           => ['nullable', 'boolean'],           // محصول ویژه
-            'order'              => ['nullable', 'integer', 'min:0'],  // ترتیب نمایش
-            'published_at'       => ['nullable', 'date'],              // زمان انتشار
+            'name'               => ['required', 'string', 'max:255'],
+            'slug'               => ['nullable', 'string', 'max:255'],
+            'description'        => ['nullable', 'string'],
+            'meta_title'         => ['nullable', 'string', 'max:255'],
+            'meta_description'   => ['nullable', 'string', 'max:255'],
+            'price'              => ['required', 'numeric', 'min:0'],
+            'discount_price'     => ['nullable', 'numeric', 'min:0'],
+            'quantity'           => ['required', 'integer', 'min:0'],
+            'category_id'        => ['required', 'integer', 'exists:categories,id'],
+            'subcategory_id'     => ['required', 'integer', 'exists:subcategories,id'],
+            'sub_subcategory_id' => ['required', 'integer', 'exists:sub_subcategories,id'],
+            'sku'                => ['nullable', 'string', 'max:100'],
+            'cover'              => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+            'status'             => ['required', Rule::in(['pending', 'approved', 'rejected'])],
+            'featured'           => ['nullable', 'boolean'],
+            'order'              => ['nullable', 'integer', 'min:0'],
+            'published_at'       => ['nullable', 'date'],
+            // تگ‌ها
+            'tags'               => ['nullable', 'array'],
+            'tags.*'             => ['integer', 'exists:tags,id'],
+            // ویژگی‌های اختصاصی
+            'attributes'         => ['nullable', 'array'],
+            'attributes.*'       => ['nullable', 'string'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'name.required'               => 'نام محصول الزامی است.',
+            'category_id.required'        => 'دسته اصلی الزامی است.',
+            'subcategory_id.required'     => 'زیردسته اول الزامی است.',
+            'sub_subcategory_id.required' => 'زیردسته دوم الزامی است.',
+            'price.required'              => 'قیمت محصول الزامی است.',
+            'quantity.required'           => 'موجودی محصول الزامی است.',
+            'status.required'             => 'وضعیت محصول الزامی است.',
+            'cover.image'                 => 'فایل انتخاب شده باید تصویر باشد.',
+            'cover.max'                   => 'حجم تصویر نباید بیشتر از ۲ مگابایت باشد.',
+            'tags.*.exists'               => 'تگ انتخاب شده نامعتبر است.',
         ];
     }
 }

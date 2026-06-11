@@ -42,7 +42,9 @@ class LoginController extends Controller
         $remember = $request->has('remember');
         Auth::login($user, $remember);
 
-        return redirect()->intended('/dashboard');
+        $route = $user->isAdmin() ? 'admin.dashboard' : 'dashboard';
+
+        return redirect()->intended(route($route));
     }
 
 
