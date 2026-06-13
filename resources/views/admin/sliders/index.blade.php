@@ -509,32 +509,32 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($slides as $slide)
+                        @foreach ($slides as $slider)
                             <tr>
-                                <td style="font-weight: 600;">{{ $slide->title }}</td>
-                                <td>{{ $slide->subtitle }}</td>
-                                <td>{{ $slide->price_text }}</td>
-                                <td>{{ $slide->price_value }}</td>
-                                <td>{{ $slide->price_unit }}</td>
+                                <td style="font-weight: 600;">{{ $slider->title }}</td>
+                                <td>{{ $slider->subtitle }}</td>
+                                <td>{{ $slider->price_text }}</td>
+                                <td>{{ $slider->price_value }}</td>
+                                <td>{{ $slider->price_unit }}</td>
                                 <td class="link-cell">
-                                    @if ($slide->link)
-                                        <a href="{{ $slide->link }}" target="_blank">
+                                    @if ($slider->link)
+                                        <a href="{{ $slider->link }}" target="_blank">
                                             <i class="fas fa-external-link-alt"></i>
-                                            {{ $slide->link }}
+                                            {{ $slider->link }}
                                         </a>
                                     @else
                                         <span class="no-image">-</span>
                                     @endif
                                 </td>
                                 <td>
-                                    @if ($slide->image)
-                                        <img src="{{ asset('storage/' . $slide->image) }}" class="table-image"
-                                            data-bs-toggle="modal" data-bs-target="#imageModal{{ $slide->id }}">
+                                    @if ($slider->image)
+                                        <img src="{{ asset('storage/' . $slider->image) }}" class="table-image"
+                                            data-bs-toggle="modal" data-bs-target="#imageModal{{ $slider->id }}">
                                     @else
                                         <span class="no-image">بدون تصویر</span>
                                     @endif
                                 </td>
-                                <td class="description-cell">{{ Str::limit($slide->description, 50) }}</td>
+                                <td class="description-cell">{{ Str::limit($slider->description, 50) }}</td>
                                 <td>
                                     <span class="status-badge status-active">فعال</span>
                                 </td>
@@ -542,12 +542,12 @@
                                     <div class="action-buttons">
                                         <!-- دکمه ویرایش -->
                                         <button class="btn-custom btn-warning-custom btn-sm" data-bs-toggle="modal"
-                                            data-bs-target="#editSliderModal{{ $slide->id }}">
+                                            data-bs-target="#editSliderModal{{ $slider->id }}">
                                             <i class="fas fa-edit"></i>
                                             ویرایش
                                         </button>
                                         <!-- فرم حذف -->
-                                        <form action="{{ route('sliders.destroy', $slide->id) }}" method="POST"
+                                        <form action="{{ route('admin.sliders.destroy', $slider->id) }}" method="POST"
                                             style="display: inline;">
                                             @csrf
                                             @method('DELETE')
@@ -562,7 +562,7 @@
                             </tr>
 
                             <!-- مودال نمایش تصویر -->
-                            <div class="modal fade" id="imageModal{{ $slide->id }}" tabindex="-1">
+                            <div class="modal fade" id="imageModal{{ $slider->id }}" tabindex="-1">
                                 <div class="modal-dialog modal-lg">
                                     <div class="modal-content">
                                         <div class="modal-header">
@@ -571,7 +571,7 @@
                                                 aria-label="بستن"></button>
                                         </div>
                                         <div class="modal-body" style="text-align: center;">
-                                            <img src="{{ asset('storage/' . $slide->image) }}" class="modal-image"
+                                            <img src="{{ asset('storage/' . $slider->image) }}" class="modal-image"
                                                 alt="تصویر اسلایدر">
                                         </div>
                                     </div>
@@ -579,7 +579,7 @@
                             </div>
 
                             <!-- مودال ویرایش -->
-                            <div class="modal fade" id="editSliderModal{{ $slide->id }}" tabindex="-1">
+                            <div class="modal fade" id="editSliderModal{{ $slider->id }}" tabindex="-1">
                                 <div class="modal-dialog modal-lg">
                                     <div class="modal-content">
                                         <div class="modal-header">
@@ -588,7 +588,7 @@
                                                 aria-label="بستن"></button>
                                         </div>
                                         <div class="modal-body">
-                                            <form action="{{ route('sliders.update', $slide->id) }}" method="POST"
+                                            <form action="{{ route('admin.sliders.update', $slider->id) }}" method="POST"
                                                 enctype="multipart/form-data">
                                                 @csrf
                                                 @method('PUT')
@@ -596,42 +596,42 @@
                                                     <div class="col-md-6">
                                                         <label class="form-label">عنوان</label>
                                                         <input type="text" name="title" class="form-control"
-                                                            value="{{ $slide->title }}" required>
+                                                            value="{{ $slider->title }}" required>
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">زیرعنوان</label>
                                                         <input type="text" name="subtitle" class="form-control"
-                                                            value="{{ $slide->subtitle }}">
+                                                            value="{{ $slider->subtitle }}">
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">متن قیمت</label>
                                                         <input type="text" name="price_text" class="form-control"
-                                                            value="{{ $slide->price_text }}">
+                                                            value="{{ $slider->price_text }}">
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">مقدار قیمت</label>
                                                         <input type="text" name="price_value" class="form-control"
-                                                            value="{{ $slide->price_value }}">
+                                                            value="{{ $slider->price_value }}">
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">واحد قیمت</label>
                                                         <input type="text" name="price_unit" class="form-control"
-                                                            value="{{ $slide->price_unit }}">
+                                                            value="{{ $slider->price_unit }}">
                                                     </div>
                                                     <div class="col-md-6">
                                                         <label class="form-label">لینک</label>
                                                         <input type="url" name="link" class="form-control"
-                                                            value="{{ $slide->link }}">
+                                                            value="{{ $slider->link }}">
                                                     </div>
                                                     <div class="col-md-12">
                                                         <label class="form-label">توضیحات</label>
-                                                        <textarea name="description" rows="3" class="form-control">{{ $slide->description }}</textarea>
+                                                        <textarea name="description" rows="3" class="form-control">{{ $slider->description }}</textarea>
                                                     </div>
                                                     <div class="col-md-12">
                                                         <label class="form-label">تصویر</label>
                                                         <input type="file" name="image" class="form-control">
-                                                        @if ($slide->image)
-                                                            <img src="{{ asset('storage/' . $slide->image) }}"
+                                                        @if ($slider->image)
+                                                            <img src="{{ asset('storage/' . $slider->image) }}"
                                                                 class="img-preview">
                                                         @endif
                                                     </div>
@@ -650,7 +650,7 @@
                             </div>
                         @endforeach
                     </tbody>
-                </table>
+                </div>
             </div>
         </div>
 
@@ -663,7 +663,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="بستن"></button>
                     </div>
                     <div class="modal-body">
-                        <form action="{{ route('sliders.store') }}" method="POST" enctype="multipart/form-data">
+                        <form action="{{ route('admin.sliders.store') }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             <div class="row g-3">
                                 <div class="col-md-6">

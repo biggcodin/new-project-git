@@ -575,7 +575,7 @@
         </div>
 
         <!-- فرم جستجو -->
-        <form action="{{ route('articles.index') }}" method="GET" class="search-form">
+        <form action="{{ route('admin.articles.index') }}" method="GET" class="search-form">
             <div class="search-input-group">
                 <input type="text" name="search" class="search-input" placeholder="جستجوی مقاله..."
                     value="{{ request('search') }}">
@@ -639,7 +639,7 @@
                                             data-bs-target="#editArticleModal{{ $article->id }}">
                                             ویرایش
                                         </button>
-                                        <form action="{{ route('articles.destroy', $article->id) }}" method="POST"
+                                        <form action="{{ route('admin.articles.destroy', $article->id) }}" method="POST"
                                             class="d-inline"
                                             onsubmit="return confirm('آیا مطمئن هستید که می‌خواهید حذف کنید؟')">
                                             @csrf
@@ -661,7 +661,7 @@
                                 aria-labelledby="editArticleModalLabel{{ $article->id }}" aria-hidden="true">
                                 <div class="modal-dialog modal-lg modal-dialog-scrollable">
                                     <div class="modal-content">
-                                        <form action="{{ route('articles.update', $article->id) }}" method="POST"
+                                        <form action="{{ route('admin.articles.update', $article->id) }}" method="POST"
                                             enctype="multipart/form-data">
                                             @csrf
                                             @method('PUT')
@@ -891,7 +891,7 @@
         aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
-                <form action="{{ route('articles.store') }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.articles.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     <div class="modal-header">
                         <h5 class="modal-title" id="addArticleModalLabel">افزودن مقاله جدید</h5>
@@ -952,7 +952,7 @@
     @foreach ($articles as $article)
         @foreach ($article->attachments as $attachment)
             <form id="delete-attachment-{{ $attachment->id }}" method="POST"
-                action="{{ route('attachments.destroy', $attachment->id) }}" style="display: none;">
+                action="{{ route('admin.attachments.destroy', $attachment->id) }}" style="display: none;">
                 @csrf
                 @method('DELETE')
             </form>

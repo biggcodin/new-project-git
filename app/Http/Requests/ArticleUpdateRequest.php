@@ -9,7 +9,7 @@ class ArticleUpdateRequest extends FormRequest
     // بررسی مجوز دسترسی برای ویرایش مقاله
     public function authorize(): bool
     {
-        return $this->user()->can('update', $this->route('article'));
+        return true;
     }
 
     // قوانین اعتبارسنجی برای بروزرسانی مقاله

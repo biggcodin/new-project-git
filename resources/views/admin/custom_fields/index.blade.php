@@ -9,8 +9,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <style>
         :root {
             --bg: #0f172a;
@@ -29,7 +30,8 @@
             box-sizing: border-box;
         }
 
-        html, body {
+        html,
+        body {
             margin: 0;
             height: 100%;
             background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
@@ -263,7 +265,7 @@
         }
 
         .modal-header {
-            background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.0));
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.0));
             border-bottom: 1px solid var(--border);
             padding: 20px;
         }
@@ -378,6 +380,10 @@
                 <i class="fas fa-plus"></i>
                 افزودن فیلد
             </a>
+            <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+                <i class="fas fa-tachometer-alt"></i>
+                بازگشت به داشبورد
+            </a>
         </div>
 
         <!-- جدول لیست فیلد‌ها -->
@@ -404,7 +410,8 @@
                                 <td style="color: var(--accent); font-weight: 500;">{{ $field->key }}</td>
                                 <td>{{ $field->label }}</td>
                                 <td>
-                                    <span style="background: rgba(167, 139, 250, 0.1); padding: 4px 10px; border-radius: 6px; font-size: 12px;">
+                                    <span
+                                        style="background: rgba(167, 139, 250, 0.1); padding: 4px 10px; border-radius: 6px; font-size: 12px;">
                                         {{ $field->type }}
                                     </span>
                                 </td>
@@ -427,8 +434,8 @@
                                             <i class="fas fa-edit"></i>
                                             ویرایش
                                         </button>
-                                        <form action="{{ route('admin.custom-fields.destroy', $field->id) }}" method="POST"
-                                            class="d-inline">
+                                        <form action="{{ route('admin.custom-fields.destroy', $field->id) }}"
+                                            method="POST" class="d-inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn-custom btn-danger-custom btn-sm"
@@ -557,12 +564,12 @@
                         <div class="mb-3">
                             <label class="form-label">${field.label}</label>
                             ${field.type === 'select' ? `
-                                        <select name="attributes[${key}]" class="form-control">
-                                            ${field.options.map(opt => `<option>${opt}</option>`).join('')}
-                                        </select>
-                                    ` : `
-                                        <input type="${field.type}" name="attributes[${key}]" class="form-control" value="">
-                                    `}
+                                                <select name="attributes[${key}]" class="form-control">
+                                                    ${field.options.map(opt => `<option>${opt}</option>`).join('')}
+                                                </select>
+                                            ` : `
+                                                <input type="${field.type}" name="attributes[${key}]" class="form-control" value="">
+                                            `}
                         </div>`;
                     }
                 })

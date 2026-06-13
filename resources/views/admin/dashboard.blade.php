@@ -630,6 +630,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.custom-fields.index') }}">
+                            <i class="fas fa-i-cursor"></i>
+                            <span>فیلدهای اختصاصی</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="{{ route('admin.tags.index') }}">
                             <i class="fas fa-tags"></i>
                             <span>تگ‌ها</span>
@@ -647,8 +653,7 @@
                             <span>مقالات</span>
                         </a>
                     </li>
-                </ul>
-                <li class="nav-item">
+                    <li class="nav-item">
                     <a class="nav-link" href="{{ route('admin.users.index') }}">
                         <i class="fas fa-users"></i>
                         <span>مدیریت کاربران</span>
@@ -660,6 +665,8 @@
                         <span>محصولات در لیست انتظار</span>
                     </a>
                 </li>
+                </ul>
+                
             </div>
 
 

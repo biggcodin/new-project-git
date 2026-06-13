@@ -100,6 +100,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/categories/{type}/{id}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('/categories/{type}/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
+    
     Route::get('/custom-fields', [CustomFieldController::class, 'index'])->name('custom-fields.index');
     Route::get('/custom-fields/create', [CustomFieldController::class, 'create'])->name('custom-fields.create');
     Route::post('/custom-fields', [CustomFieldController::class, 'store'])->name('custom-fields.store');
@@ -129,9 +130,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::get('/product-fields', [CustomFieldController::class, 'getFields'])->name('product.fields');
+
 });
 
-// 🌐 مقالات
+// 🌐 مسیرهای عمومی مقالات (قابل دسترسی برای همه)
 Route::get('/news', [ArticleController::class, 'showNews'])->name('news.index');
 Route::get('/news/{slug}', [ArticleController::class, 'showSingleArticle'])->name('news.single');
 Route::get('/tags/{slug}', [ArticleController::class, 'showArticlesByTag'])->name('articles.tag');

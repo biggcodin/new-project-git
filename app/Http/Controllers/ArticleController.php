@@ -11,9 +11,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\ArticleStoreRequest;
 use App\Http\Requests\ArticleUpdateRequest;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class ArticleController extends Controller
 {
+    use AuthorizesRequests;
     // لیست مقالات با فیلتر و تگ‌ها
     public function index(Request $request)
     {
@@ -45,49 +47,49 @@ class ArticleController extends Controller
 
     // ذخیره مقاله جدید با تگ‌ها و فایل‌ها
     public function store(ArticleStoreRequest $request)
-    {
-        $this->authorize('create', Article::class); // کنترل دسترسی با Policy
+{
+    // حذف شد: dd(auth()->user()->only(...))
+    // حذف شد: $this->authorize('create', Article::class);
 
-        $data = $request->validated();
+    $data = $request->validated();
 
-        DB::transaction(function () use ($request, $data) {
-            $slug = $this->uniqueSlug(Str::slug($data['title'])); // ساخت slug یکتا
+    DB::transaction(function () use ($request, $data) {
+        $slug = $this->uniqueSlug(Str::slug($data['title']));
 
-            $article = Article::create([
-                'title'   => $data['title'],
-                'slug'    => $slug,
-                'content' => $data['content'],
-                'status'  => $data['status'],
-                'image'   => null,
+        $article = Article::create([
+            'title'   => $data['title'],
+            'slug'    => $slug,
+            'content' => $data['content'],
+            'status'  => $data['status'],
+            'image'   => null,
+        ]);
+
+        // ذخیره تصویر مقاله
+        if ($request->hasFile('image')) {
+            $article->image = $request->file('image')->store('articles', 'public');
+            $article->save();
+        }
+
+        // اتصال تگ‌ها
+        $article->tags()->sync($data['tags'] ?? []);
+
+        // ذخیره فایل‌های ضمیمه
+        foreach ($request->file('attachments', []) as $file) {
+            $article->attachments()->create([
+                'file_path' => $file->store('attachments', 'public'),
+                'file_name' => $file->getClientOriginalName(),
+                'file_type' => $file->getClientMimeType(),
+                'file_size' => $file->getSize(),
             ]);
+        }
+    });
 
-            // ذخیره تصویر مقاله
-            if ($request->hasFile('image')) {
-                $article->image = $request->file('image')->store('articles', 'public');
-                $article->save();
-            }
-
-            // اتصال تگ‌ها
-            $article->tags()->sync($data['tags'] ?? []);
-
-            // ذخیره فایل‌های ضمیمه
-            foreach ($request->file('attachments', []) as $file) {
-                $article->attachments()->create([
-                    'file_path' => $file->store('attachments', 'public'),
-                    'file_name' => $file->getClientOriginalName(),
-                    'file_type' => $file->getClientMimeType(),
-                    'file_size' => $file->getSize(),
-                ]);
-            }
-        });
-
-        return redirect()->route('articles.index')->with('success', 'مقاله با موفقیت ثبت شد.');
-    }
-
+    return redirect()->route('admin.articles.index')->with('success', 'مقاله با موفقیت ثبت شد.');
+}
     // ویرایش مقاله موجود
     public function update(ArticleUpdateRequest $request, Article $article)
     {
-        $this->authorize('update', $article); // کنترل دسترسی
+        // $this->authorize('update', $article); // کنترل دسترسی
 
         $data = $request->validated();
 
@@ -125,13 +127,13 @@ class ArticleController extends Controller
             }
         });
 
-        return redirect()->route('articles.index')->with('success', 'مقاله با موفقیت ویرایش شد.');
+        return redirect()->route('admin.articles.index')->with('success', 'مقاله با موفقیت ویرایش شد.');
     }
 
     // حذف مقاله و فایل‌های مرتبط
     public function destroy(Article $article)
     {
-        $this->authorize('delete', $article);
+        // $this->authorize('delete', $article);
 
         DB::transaction(function () use ($article) {
             Storage::disk('public')->delete($article->image);
@@ -143,7 +145,7 @@ class ArticleController extends Controller
             $article->delete();
         });
 
-        return redirect()->route('articles.index')->with('success', 'مقاله با موفقیت حذف شد.');
+        return redirect()->route('admin.articles.index')->with('success', 'مقاله با موفقیت حذف شد.');
     }
 
     // حذف یک فایل ضمیمه
@@ -160,7 +162,7 @@ class ArticleController extends Controller
     // حذف تصویر مقاله
     public function destroyImage(Article $article)
     {
-        $this->authorize('update', $article);
+        // $this->authorize('update', $article);
 
         Storage::disk('public')->delete($article->image);
         $article->update(['image' => null]);

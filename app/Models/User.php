@@ -6,10 +6,11 @@ use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Auth\Authenticatable as AuthenticatableTrait;
 use Illuminate\Database\Eloquent\SoftDeletes; // اضافه شده
+use Illuminate\Foundation\Auth\Access\Authorizable;
 
 class User extends Model implements Authenticatable
 {
-    use HasFactory, AuthenticatableTrait, SoftDeletes; // SoftDeletes اضافه شد
+    use HasFactory, AuthenticatableTrait, SoftDeletes, Authorizable; // SoftDeletes اضافه شد
 
     protected $fillable = [
         'name',
