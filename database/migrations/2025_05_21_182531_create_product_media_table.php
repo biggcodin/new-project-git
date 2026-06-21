@@ -21,4 +21,4 @@ class CreateProductMediaTable extends Migration
     {
         Schema::dropIfExists('product_media');
     }
-}
+};

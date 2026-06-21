@@ -9,7 +9,7 @@ class CartController extends Controller
     public function index()
     {
         // بعداً کامل می‌شود
-        return view('cart');
+        return view('user.cart');
     }
 
     public function store($product)

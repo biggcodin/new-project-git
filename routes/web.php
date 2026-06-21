@@ -15,19 +15,32 @@ use App\Http\Controllers\VideoController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Admin\ProductApprovalController;
 use App\Http\Controllers\Admin\UserApprovalController;
+use App\Http\Controllers\Admin\SellerApplicationAdminController; // <-- اضافه شد
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\DiscountController;
+use App\Http\Controllers\SellerRequestController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\SellerApplicationController;
 
-// 🌟 تست صفحات و ویوها
+// ======================================================================
+// 🌟 بخش تست صفحات و ویوهای موقت
+// ======================================================================
 Route::get('a', fn() => view('product-details'));
 Route::get('b', fn() => view('user.user-panel'));
 Route::get('c', fn() => view('user.cart'));
 Route::get('d', [ArticleController::class, 'showNews']);
 
+// ======================================================================
 // 🏠 صفحه اصلی
+// ======================================================================
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/index', [HomeController::class, 'index']);
 Route::redirect('/index.html', '/', 301);
 
-// 🔐 احراز هویت
+// ======================================================================
+// 🔐 احراز هویت (ورود، ثبت‌نام، خروج)
+// ======================================================================
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
@@ -35,57 +48,112 @@ Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('/register', [RegisterController::class, 'showRegistrationForm'])->name('register');
 Route::post('/register', [RegisterController::class, 'register'])->name('register.submit');
 
-// 👤 مسیرهای کاربر
+// ======================================================================
+// 👤 مسیرهای پنل کاربری (نیازمند احراز هویت)
+// ======================================================================
 Route::prefix('user')->middleware('auth')->group(function () {
-    Route::get('/dashboard', fn() => view('user-dashboard'))->name('dashboard');
-    
-    Route::get('/user-panel', function() {
+
+    // ----- داشبورد و پنل کاربر -----
+    Route::get('/dashboard', fn() => view('user.user-panel'))->name('dashboard');
+    Route::get('/user-panel', function () {
         return view('user.user-panel');
     })->name('user.panel');
-    
+
+    // ----- مدیریت حساب کاربری (اکانت) -----
     Route::get('/account', fn () => redirect()->route('user.account.create'))->name('user.account');
     Route::get('/account/create', [UserAccountController::class, 'create'])->name('user.account.create');
     Route::post('/account', [UserAccountController::class, 'store'])->name('user.account.store');
-    
-    // 🛒 سبد خرید
+
+    // ----- کیف پول (شارژ، تاریخچه) -----
+    Route::get('/wallet/charge', [UserController::class, 'walletCharge'])->name('wallet.charge');
+    Route::post('/wallet/charge', [UserController::class, 'charge'])->name('wallet.charge.submit');
+    Route::get('/wallet/history', [UserController::class, 'walletHistory'])->name('wallet.history');
+
+    // ----- خریدهای من و جزئیات سفارش -----
+    Route::get('/purchases', [UserController::class, 'purchases'])->name('user.purchases');
+    Route::get('/order/{order}', [UserController::class, 'orderDetails'])->name('order.details');
+
+    // ----- آگهی‌ها، پیام‌ها و ویرایش پروفایل -----
+    Route::get('/ads', [UserController::class, 'ads'])->name('user.ads');
+    Route::get('/chat', [UserController::class, 'chat'])->name('user.chat');
+    Route::get('/profile/edit', [UserController::class, 'profileEdit'])->name('user.profile.edit');
+    Route::put('/profile', [UserController::class, 'profileUpdate'])->name('user.profile.update');
+
+    // ----- 🛒 سبد خرید (مدیریت آیتم‌ها) -----
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/{product}', [CartController::class, 'store'])->name('cart.store');
     Route::put('/cart/{cart}', [CartController::class, 'update'])->name('cart.update');
     Route::delete('/cart/{cart}', [CartController::class, 'destroy'])->name('cart.destroy');
+
+    // ----- 💳 تسویه حساب و پرداخت (کیف پول / درگاه) -----
+    Route::post('/checkout/wallet', [CheckoutController::class, 'payWithWallet'])->name('checkout.wallet');
+    Route::post('/checkout/gateway', [CheckoutController::class, 'payWithGateway'])->name('checkout.gateway');
+    Route::get('/gateway/simulate/{order}', [CheckoutController::class, 'simulateGateway'])->name('gateway.simulate');
+    Route::get('/gateway/callback', [CheckoutController::class, 'gatewayCallback'])->name('gateway.callback');
+
+    // ----- 🏷️ اعمال کد تخفیف (AJAX) -----
+    Route::post('/discount/apply', [DiscountController::class, 'apply'])->name('discount.apply');
+
+    // ----- 📝 درخواست فروشندگی (قدیمی - در صورت نیاز) -----
+    Route::get('/seller-request', [SellerRequestController::class, 'create'])->name('seller.request.create');
+    Route::post('/seller-request', [SellerRequestController::class, 'store'])->name('seller.request.store');
 });
 
-// هدایت آدرس‌های اشتباه
+// ======================================================================
+// 📝 مسیرهای فرم ویزارد درخواست فروش اکانت (جدید)
+// ======================================================================
+Route::prefix('seller/product-request')->name('seller.product.request.')->middleware('auth')->group(function () {
+    Route::get('/', [SellerApplicationController::class, 'index'])->name('index');
+    Route::post('/store', [SellerApplicationController::class, 'store'])->name('store');
+    Route::get('/get-fields', [SellerApplicationController::class, 'getFields'])->name('getFields');
+});
+
+// ======================================================================
+// 🔄 هدایت آدرس‌های اشتباه (سازگاری با نسخه‌های قبلی)
+// ======================================================================
 Route::redirect('/user/admin', '/admin');
 Route::get('/user/admin/{path}', function (string $path) {
     return redirect('/admin/' . $path);
 })->where('path', '.*');
 
+// ======================================================================
+// 🌐 مسیرهای عمومی (بدون نیاز به احراز هویت)
+// ======================================================================
 
-// 🌐 مسیرهای عمومی
+// ----- دریافت فیلدهای سفارشی برای فرم محصولات (AJAX) -----
 Route::get('/product-fields', [CustomFieldController::class, 'getFields'])->name('products.getFields');
-Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 
-// AJAX routes for categories
+// ----- دریافت زیردسته‌ها و زیرزیردسته‌ها (AJAX) -----
 Route::get('/get-subcategories/{categoryId}', [ProductController::class, 'getSubcategories'])->name('get.subcategories');
 Route::get('/get-subsubcategories/{subcategoryId}', [ProductController::class, 'getSubSubcategories'])->name('get.subsubcategories');
 
-// 🌐 مسیرهای عمومی سمت کاربر
+// ----- نمایش محصولات در سایت (برای کاربران عادی) -----
 Route::get('/products', [ProductController::class, 'showProducts'])->name('products.index');
 Route::get('/product/{slug}', [ProductController::class, 'showSingleProduct'])->name('products.single');
+Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 
-// 🌐 نظرات
+// ----- ثبت نظر برای مقالات (عمومی) -----
 Route::post('/articles/{article}/comments', [CommentController::class, 'store'])->name('comments.store');
 
-// 🛠 مسیرهای پنل مدیریت
+// ----- مقالات و برچسب‌ها (عمومی) -----
+Route::get('/news', [ArticleController::class, 'showNews'])->name('news.index');
+Route::get('/news/{slug}', [ArticleController::class, 'showSingleArticle'])->name('news.single');
+Route::get('/tags/{slug}', [ArticleController::class, 'showArticlesByTag'])->name('articles.tag');
+
+// ======================================================================
+// 🛠 مسیرهای پنل مدیریت (ادمین) – نیازمند احراز هویت و نقش admin
+// ======================================================================
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+
+    // ----- داشبورد مدیریت -----
     Route::get('/dashboard', [HomeController::class, 'adminDashboard'])->name('dashboard');
 
+    // ----- مدیریت تایید محصولات -----
     Route::get('/pending-products', [ProductApprovalController::class, 'index'])->name('pending.products');
-
-    // عملیات تایید و رد
     Route::post('/pending-products/{product}/approve', [ProductApprovalController::class, 'approve'])->name('pending.products.approve');
     Route::post('/pending-products/{product}/reject', [ProductApprovalController::class, 'reject'])->name('pending.products.reject');
 
+    // ----- مدیریت کاربران -----
     Route::get('/pending-users', [UserApprovalController::class, 'pendingIndex'])->name('pending.users');
     Route::post('/pending-users/{user}/approve', [UserApprovalController::class, 'approve'])->name('pending.users.approve');
     Route::post('/pending-users/{user}/reject', [UserApprovalController::class, 'reject'])->name('pending.users.reject');
@@ -95,12 +163,26 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/users/{user}', [UserApprovalController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserApprovalController::class, 'destroy'])->name('users.destroy');
 
+    // ================================================================
+    // 🆕 مدیریت درخواست‌های فروشندگی (جدید)
+    // ================================================================
+    Route::prefix('seller-applications')->name('seller.applications.')->group(function () {
+        Route::get('/', [SellerApplicationAdminController::class, 'index'])->name('index');
+        Route::get('/{application}', [SellerApplicationAdminController::class, 'show'])->name('show');
+        Route::post('/{application}/approve', [SellerApplicationAdminController::class, 'approve'])->name('approve');
+        Route::post('/{application}/reject', [SellerApplicationAdminController::class, 'reject'])->name('reject');
+        Route::delete('/{application}', [SellerApplicationAdminController::class, 'destroy'])->name('destroy');
+    });
+
+    // ================================================================
+
+    // ----- مدیریت دسته‌بندی‌ها (Categories) -----
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
     Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');
     Route::put('/categories/{type}/{id}', [CategoryController::class, 'update'])->name('categories.update');
     Route::delete('/categories/{type}/{id}', [CategoryController::class, 'destroy'])->name('categories.destroy');
 
-    
+    // ----- مدیریت فیلدهای سفارشی (Custom Fields) -----
     Route::get('/custom-fields', [CustomFieldController::class, 'index'])->name('custom-fields.index');
     Route::get('/custom-fields/create', [CustomFieldController::class, 'create'])->name('custom-fields.create');
     Route::post('/custom-fields', [CustomFieldController::class, 'store'])->name('custom-fields.store');
@@ -108,6 +190,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/custom-fields/{customField}', [CustomFieldController::class, 'update'])->name('custom-fields.update');
     Route::delete('/custom-fields/{customField}', [CustomFieldController::class, 'destroy'])->name('custom-fields.destroy');
 
+    // ----- مدیریت برچسب‌ها (Tags) -----
     Route::get('/tags', [TagController::class, 'index'])->name('tags.index');
     Route::get('/tags/create', [TagController::class, 'create'])->name('tags.create');
     Route::post('/tags', [TagController::class, 'store'])->name('tags.store');
@@ -115,12 +198,18 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::put('/tags/{tag}', [TagController::class, 'update'])->name('tags.update');
     Route::delete('/tags/{tag}', [TagController::class, 'destroy'])->name('tags.destroy');
 
+    // ----- مدیریت اسلایدرها -----
     Route::resource('sliders', SliderController::class)->except(['show']);
+
+    // ----- مدیریت مقالات -----
     Route::resource('articles', ArticleController::class);
     Route::delete('/articles/{article}/image', [ArticleController::class, 'destroyImage'])->name('articles.image.destroy');
     Route::delete('/articles/attachments/{attachment}', [ArticleController::class, 'destroyAttachment'])->name('attachments.destroy');
+
+    // ----- مدیریت ویدیوها -----
     Route::resource('videos', VideoController::class);
 
+    // ----- مدیریت محصولات (در پنل ادمین) -----
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
@@ -130,10 +219,4 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
     Route::get('/product-fields', [CustomFieldController::class, 'getFields'])->name('product.fields');
-
 });
-
-// 🌐 مسیرهای عمومی مقالات (قابل دسترسی برای همه)
-Route::get('/news', [ArticleController::class, 'showNews'])->name('news.index');
-Route::get('/news/{slug}', [ArticleController::class, 'showSingleArticle'])->name('news.single');
-Route::get('/tags/{slug}', [ArticleController::class, 'showArticlesByTag'])->name('articles.tag');

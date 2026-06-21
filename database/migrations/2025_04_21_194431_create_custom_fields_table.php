@@ -30,4 +30,4 @@ class CreateCustomFieldsTable extends Migration
     {
         Schema::dropIfExists('custom_fields');
     }
-}
+};

@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
@@ -522,8 +521,18 @@
                     <label class="filter-label">نقش</label>
                     <select name="role" class="filter-select">
                         <option value="">همه نقش‌ها</option>
-                        <option value="admin" {{ request('role') == 'admin' ? 'selected' : '' }}>ادمین</option>
-                        <option value="user" {{ request('role') == 'user' ? 'selected' : '' }}>کاربر</option>
+                        @foreach ($roles as $role)
+                            <option value="{{ $role }}" {{ request('role') == $role ? 'selected' : '' }}>
+                                {{ match ($role) {
+                                    'super_admin' => 'سوپر ادمین',
+                                    'admin' => 'ادمین',
+                                    'seller' => 'فروشنده',
+                                    'buyer' => 'خریدار',
+                                    'user' => 'کاربر عادی',
+                                    default => $role,
+                                } }}
+                            </option>
+                        @endforeach
                     </select>
                 </div>
                 <div class="filter-buttons">
@@ -567,8 +576,22 @@
                                     <td>
                                         <span class="badge-custom role-badge">
                                             <i
-                                                class="fas {{ $user->role == 'admin' ? 'fa-user-shield' : 'fa-user' }}"></i>
-                                            {{ $user->role == 'admin' ? 'ادمین' : 'کاربر' }}
+                                                class="fas {{ match ($user->role) {
+                                                    'super_admin' => 'fa-crown',
+                                                    'admin' => 'fa-user-shield',
+                                                    'seller' => 'fa-store',
+                                                    'buyer' => 'fa-shopping-bag',
+                                                    'user' => 'fa-user',
+                                                    default => 'fa-user',
+                                                } }}"></i>
+                                            {{ match ($user->role) {
+                                                'super_admin' => 'سوپر ادمین',
+                                                'admin' => 'ادمین',
+                                                'seller' => 'فروشنده',
+                                                'buyer' => 'خریدار',
+                                                'user' => 'کاربر عادی',
+                                                default => $user->role,
+                                            } }}
                                         </span>
                                     </td>
                                     <td>
@@ -620,4 +643,3 @@
 </body>
 
 </html>
-

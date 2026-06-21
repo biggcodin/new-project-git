@@ -654,19 +654,25 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.users.index') }}">
-                        <i class="fas fa-users"></i>
-                        <span>مدیریت کاربران</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ route('admin.pending.products') }}">
-                        <i class="fas fa-clock"></i>
-                        <span>محصولات در لیست انتظار</span>
-                    </a>
-                </li>
+                        <a class="nav-link" href="{{ route('admin.users.index') }}">
+                            <i class="fas fa-users"></i>
+                            <span>مدیریت کاربران</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.seller.applications.index') }}">
+                            <i class="fas fa-store"></i>
+                            <span>درخواست‌های فروشندگی</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('admin.pending.products') }}">
+                            <i class="fas fa-clock"></i>
+                            <span>محصولات در لیست انتظار</span>
+                        </a>
+                    </li>
                 </ul>
-                
+
             </div>
 
 

@@ -33,6 +33,35 @@ class UserApprovalController extends Controller
         return back()->with('success', 'کاربر رد شد.');
     }
 
+    // درخواست فروشندگی
+    public function sellerRequestsIndex()
+    {
+        $users = User::where('seller_request_status', 'pending')->paginate(10);
+        return view('admin.seller-requests', compact('users'));
+    }
+
+    public function approveSeller(User $user)
+{
+    $user->approveSellerRequest();
+    
+    // ذخیره پیام در session برای نمایش در پنل کاربر
+    session()->flash('seller_request_message', '✅ درخواست فروشندگی شما با موفقیت تأیید شد. نقش شما به فروشنده تغییر یافت.');
+    session()->flash('seller_request_status', 'approved');
+    
+    return back()->with('success', 'درخواست فروشندگی تایید شد.');
+}
+
+    public function rejectSeller(User $user)
+{
+    $user->rejectSellerRequest();
+    
+    // ذخیره پیام در session برای نمایش در پنل کاربر
+    session()->flash('seller_request_message', '❌ درخواست فروشندگی شما رد شد. برای اطلاعات بیشتر با پشتیبانی تماس بگیرید.');
+    session()->flash('seller_request_status', 'rejected');
+    
+    return back()->with('success', 'درخواست فروشندگی رد شد.');
+}
+
     // لیست همه کاربران با فیلتر (مدیریت کاربران)
     public function index(Request $request)
     {
@@ -59,25 +88,29 @@ class UserApprovalController extends Controller
         }
 
         $users = $query->orderBy('created_at', 'desc')->paginate(15);
+        $roles = User::getRoleOptions(); // دریافت لیست نقش‌ها از دیتابیس
 
-        return view('admin.users.index', compact('users'));
+        return view('admin.users.index', compact('users', 'roles'));
     }
 
     // فرم ویرایش کاربر
     public function edit(User $user)
     {
-        return view('admin.users.edit', compact('user'));
+        $roles = User::getRoleOptions(); // دریافت نقش‌ها از دیتابیس
+        return view('admin.users.edit', compact('user', 'roles'));
     }
 
     // بروزرسانی کاربر
     public function update(Request $request, User $user)
     {
+        $roles = User::getRoleOptions(); // دریافت نقش‌ها برای اعتبارسنجی
+        
         $data = $request->validate([
             'name'     => 'required|string|max:255',
             'username' => ['required', 'string', 'max:255', Rule::unique('users')->ignore($user->id)],
             'email'    => ['required', 'email', Rule::unique('users')->ignore($user->id)],
             'phone'    => ['nullable', 'string', 'max:20', Rule::unique('users')->ignore($user->id)],
-            'role'     => 'required|in:admin,user',
+            'role'     => ['required', Rule::in($roles)], // اعتبارسنجی پویا
             'status'   => 'required|in:pending,approved,rejected',
         ]);
 

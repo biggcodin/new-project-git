@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 
@@ -21,8 +20,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <style>
         :root {
             --bg: #0f172a;
@@ -41,7 +41,8 @@
             box-sizing: border-box;
         }
 
-        html, body {
+        html,
+        body {
             margin: 0;
             height: 100%;
             background: linear-gradient(135deg, #0b1220 0%, #0f172a 100%);
@@ -63,7 +64,7 @@
             z-index: 0;
         }
 
-        .jarallax > .jarallax-img {
+        .jarallax>.jarallax-img {
             display: none;
         }
 
@@ -109,6 +110,26 @@
         .cart-header .text-light {
             color: var(--muted);
             font-size: 14px;
+        }
+
+        .cart-header .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+            font-size: 13px;
+        }
+
+        .cart-header .btn-back:hover {
+            color: var(--text);
+            border-color: var(--accent-2);
+            background: rgba(167, 139, 250, 0.1);
         }
 
         .cart-item {
@@ -524,17 +545,33 @@
         <div class="container">
             <div class="row justify-content-center">
                 <div class="col-lg-10">
+                    <!-- ============================================================ -->
+                    <!-- لیست سبد خرید با دکمه بازگشت به پنل (طبق درخواست شما) -->
+                    <!-- ============================================================ -->
                     <div class="cart-container">
                         <div class="cart-header">
                             <h2>سبد خرید شما</h2>
-                            <span class="text-light">تعداد محصولات: <span id="cart-count">0</span></span>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <span class="text-light">تعداد محصولات: <span id="cart-count">0</span></span>
+                                <a href="{{ route('user.panel') }}" class="btn-back">
+                                    <i class="fas fa-arrow-right"></i>
+                                    بازگشت به پنل
+                                </a>
+                            </div>
                         </div>
                         <div id="cart-items">
                             <!-- محصولات به صورت داینامیک از طریق جاوااسکریپت اضافه می‌شوند -->
                         </div>
                     </div>
+
+                    <!-- ============================================================ -->
+                    <!-- خلاصه سفارش با دو دکمه پرداخت (تنها بخش تغییر کرده) -->
+                    <!-- ============================================================ -->
                     <div class="cart-container">
-                        <h3 class="mb-4" style="color: var(--text); font-size: 20px; font-weight: 600;">خلاصه سفارش</h3>
+                        <h3 class="mb-4" style="color: var(--text); font-size: 20px; font-weight: 600;">خلاصه سفارش
+                        </h3>
+
+                        <!-- بخش کد تخفیف -->
                         <div class="discount-section">
                             <h5>کد تخفیف</h5>
                             <div class="discount-input-group">
@@ -547,6 +584,8 @@
                             </div>
                             <div id="discount-message" class="discount-message"></div>
                         </div>
+
+                        <!-- جمع‌بندی قیمت‌ها -->
                         <div class="summary-item">
                             <span>جمع کل:</span>
                             <span id="cart-total" class="price-tag">0 تومان</span>
@@ -559,147 +598,199 @@
                             <strong>مبلغ قابل پرداخت:</strong>
                             <strong id="cart-final-total" class="price-tag">0 تومان</strong>
                         </div>
-                        <div class="d-grid gap-2 mt-4">
-                            <button id="checkout-btn" class="checkout-btn">
-                                <i class="fas fa-credit-card me-2"></i>
-                                پرداخت و ثبت سفارش
-                            </button>
+
+                        <!-- دو دکمه پرداخت -->
+                        <div class="d-grid gap-2 mt-4"
+                            style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <!-- پرداخت از کیف پول -->
+                            <form action="{{ route('checkout.wallet') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="checkout-btn"
+                                    style="background: linear-gradient(135deg, #10b981, #059669);">
+                                    <i class="fas fa-wallet me-2"></i>
+                                    پرداخت از کیف پول
+                                </button>
+                            </form>
+
+                            <!-- پرداخت از درگاه -->
+                            <form action="{{ route('checkout.gateway') }}" method="POST">
+                                @csrf
+                                <button type="submit" class="checkout-btn"
+                                    style="background: linear-gradient(135deg, var(--accent-2), #8b5cf6);">
+                                    <i class="fas fa-credit-card me-2"></i>
+                                    پرداخت از درگاه
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Javascript Files -->
+
+    <!-- ============================================================ -->
+    <!-- Javascript Files (دست نخورده، فقط دکمه پرداخت و دیتای داینامیک) -->
+    <!-- ============================================================ -->
     <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/designesia.js"></script>
     <script>
-        // Initialize cart when document is ready
+        // دریافت داده‌های سبد خرید از سرور
+        const cartItemsData = @json($cartItems ?? []);
+        const cartTotal = @json($total ?? 0);
+        const cartCount = @json($count ?? 0);
+
         $(document).ready(function() {
-            // Define cart object
+            const items = cartItemsData.map(item => ({
+                id: item.id,
+                product_id: item.product_id,
+                name: item.product_name || 'محصول',
+                price: parseInt(item.price) || 0,
+                discount: item.discount || 0,
+                final_price: parseInt(item.price) || 0,
+                quantity: parseInt(item.quantity) || 1,
+                stockStatus: item.stockStatus || 'in_stock',
+                image: item.image || 'images/covers-square/default.webp',
+                options: item.options || {},
+            }));
+
             window.cart = {
-                items: [{
-                        id: 1,
-                        name: 'سرور بازی Minecraft',
-                        price: 150000,
-                        discount: 10,
-                        stockStatus: 'in_stock',
-                        image: 'images/covers-square/1.webp'
-                    },
-                    {
-                        id: 2,
-                        name: 'سرور بازی CS:GO',
-                        price: 200000,
-                        discount: 0,
-                        stockStatus: 'in_stock',
-                        image: 'images/covers-square/2.webp'
-                    },
-                    {
-                        id: 3,
-                        name: 'سرور بازی Rust',
-                        price: 180000,
-                        discount: 15,
-                        stockStatus: 'pre_order',
-                        image: 'images/covers-square/3.webp'
-                    },
-                    {
-                        id: 4,
-                        name: 'سرور بازی ARK',
-                        price: 220000,
-                        discount: 0,
-                        stockStatus: 'out_of_stock',
-                        image: 'images/covers-square/4.webp'
-                    },
-                    {
-                        id: 5,
-                        name: 'سرور بازی GTA V',
-                        price: 250000,
-                        discount: 20,
-                        stockStatus: 'in_stock',
-                        image: 'images/covers-square/5.webp'
-                    },
-                    {
-                        id: 6,
-                        name: 'سرور بازی Valheim',
-                        price: 170000,
-                        discount: 0,
-                        stockStatus: 'in_stock',
-                        image: 'images/covers-square/6.webp'
-                    }
-                ],
-                total: 0,
-                discount: 0
+                items: items,
+                total: cartTotal,
+                discount: 0,
             };
 
-            // Render cart items
             renderCartItems();
-
-            // Calculate initial totals
             updateTotals();
 
-            // Global functions
+            // ----- حذف آیتم -----
             window.removeItem = function(itemId) {
-                const itemElement = document.querySelector(`.cart-item[data-id="${itemId}"]`);
-                if (itemElement) {
-                    itemElement.remove();
-                    cart.items = cart.items.filter(item => item.id !== itemId);
-                    updateTotals();
-                }
+                if (!confirm('آیا از حذف این آیتم اطمینان دارید؟')) return;
+
+                $.ajax({
+                    url: `/cart/${itemId}`,
+                    type: 'DELETE',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            $(`.cart-item[data-id="${itemId}"]`).remove();
+                            cart.items = cart.items.filter(item => item.id !== itemId);
+                            cart.total = response.total;
+                            cart.discount = 0;
+                            updateTotals();
+                            showToast(response.message, 'success');
+                        }
+                    },
+                    error: function() {
+                        showToast('خطا در حذف آیتم', 'error');
+                    }
+                });
             };
 
-            // Add view details function
+            // ----- نمایش جزئیات محصول -----
             window.viewDetails = function(itemId) {
                 const item = cart.items.find(i => i.id === itemId);
                 if (item) {
-                    // در اینجا می‌توانید به صفحه جزئیات محصول هدایت کنید
-                    // یا یک مودال نمایش جزئیات باز کنید
-                    alert('نمایش جزئیات محصول: ' + item.name);
+                    window.location.href = `/product/${item.product_id}`;
                 }
             };
 
+            // ----- به‌روزرسانی تعداد -----
+            window.updateQuantity = function(itemId, newQuantity) {
+                if (newQuantity < 1) return;
+
+                $.ajax({
+                    url: `/cart/${itemId}`,
+                    type: 'PUT',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        quantity: newQuantity
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            const item = cart.items.find(i => i.id === itemId);
+                            if (item) {
+                                item.quantity = newQuantity;
+                                item.final_price = response.item.final_price || item.final_price;
+                            }
+                            cart.total = response.total;
+                            cart.discount = 0;
+                            renderCartItems();
+                            updateTotals();
+                            showToast(response.message, 'success');
+                        }
+                    },
+                    error: function() {
+                        showToast('خطا در به‌روزرسانی تعداد', 'error');
+                    }
+                });
+            };
+
+            // ----- رندر آیتم‌ها -----
             function renderCartItems() {
                 const cartContainer = document.getElementById('cart-items');
                 cartContainer.innerHTML = '';
 
+                if (cart.items.length === 0) {
+                    cartContainer.innerHTML = `
+                        <div class="text-center py-5" style="color: var(--muted);">
+                            <i class="fas fa-shopping-cart" style="font-size: 48px; opacity: 0.3; display: block; margin-bottom: 15px;"></i>
+                            <p style="font-size: 16px;">سبد خرید شما خالی است.</p>
+                            <a href="{{ route('products.index') }}" class="btn-action" style="margin-top: 15px; display: inline-block; background: rgba(34,211,238,0.15); color: var(--accent); border: 1px solid rgba(34,211,238,0.3); padding: 10px 20px; border-radius: 8px; text-decoration: none;">
+                                <i class="fas fa-store"></i> مشاهده محصولات
+                            </a>
+                        </div>
+                    `;
+                    return;
+                }
+
                 cart.items.forEach(item => {
-                    const finalPrice = item.price - (item.price * (item.discount / 100));
+                    const finalPrice = item.final_price;
                     const stockStatusClass = `stock-status ${item.stockStatus}`;
                     const stockStatusText = {
                         'in_stock': 'موجود',
                         'out_of_stock': 'ناموجود',
                         'pre_order': 'پیش‌فروش'
-                    } [item.stockStatus];
+                    } [item.stockStatus] || 'موجود';
 
                     const cartItemHtml = `
                         <div class="cart-item" data-id="${item.id}">
                             <div class="row align-items-center">
                                 <div class="col-md-3 position-relative">
                                     ${item.discount > 0 ? `<div class="product-discount">${item.discount}%</div>` : ''}
-                                    <img src="${item.image}" alt="${item.name}" class="img-fluid">
+                                    <img src="${item.image}" alt="${item.name}" class="img-fluid" style="width: 120px; height: 120px; object-fit: cover; border-radius: 10px; border: 2px solid var(--border);">
                                 </div>
                                 <div class="col-md-5">
-                                    <h4 class="mb-2">${item.name}</h4>
-                                    <p class="text-light mb-0">
+                                    <h4 class="mb-2" style="color: var(--text); font-size: 16px; font-weight: 600;">${item.name}</h4>
+                                    <p class="text-light mb-0" style="color: var(--muted); font-size: 13px;">
                                         قیمت واحد: 
                                         ${item.discount > 0 ? `<del>${numberFormat(item.price)}</del> ` : ''}
-                                        <span class="text-success">${numberFormat(finalPrice)}</span> تومان
+                                        <span class="text-success" style="color: var(--accent) !important; font-weight: 600;">${numberFormat(finalPrice)}</span> تومان
                                     </p>
-                                    <span class="${stockStatusClass}">${stockStatusText}</span>
+                                    <span class="${stockStatusClass}" style="font-size: 11px; padding: 5px 10px; border-radius: 999px; display: inline-block; margin-top: 5px; font-weight: 500;">${stockStatusText}</span>
                                 </div>
                                 <div class="col-md-4 text-center">
-                                    <div class="cart-item-actions">
-                                        <div class="price-tag">
-                                            <span class="currency">تومان</span>
-                                            <span>${numberFormat(finalPrice)}</span>
+                                    <div class="cart-item-actions" style="display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                                        <div style="display: flex; align-items: center; gap: 5px;">
+                                            <button class="quantity-btn" onclick="updateQuantity(${item.id}, ${item.quantity - 1})" style="width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.3); color: var(--accent-2); font-size: 18px; cursor: pointer; transition: all 0.3s ease;">
+                                                <i class="fas fa-minus"></i>
+                                            </button>
+                                            <span class="quantity-number" style="width: 40px; text-align: center; background: transparent; border: none; color: var(--text); font-size: 16px; font-weight: 600;">${item.quantity}</span>
+                                            <button class="quantity-btn" onclick="updateQuantity(${item.id}, ${item.quantity + 1})" style="width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.3); color: var(--accent-2); font-size: 18px; cursor: pointer; transition: all 0.3s ease;">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
                                         </div>
-                                        <button class="view-btn" onclick="viewDetails(${item.id})">
-                                            <i class="fas fa-eye"></i>
-                                            نمایش
+                                        <div class="price-tag" style="background: rgba(34, 211, 238, 0.12); padding: 8px 20px; border-radius: 999px; font-size: 16px; font-weight: 700; color: var(--accent); display: inline-flex; align-items: center; white-space: nowrap; min-width: 160px; justify-content: center; border: 1px solid rgba(34, 211, 238, 0.3);">
+                                            <span class="currency" style="margin-right: 5px; font-size: 12px; color: var(--muted);">تومان</span>
+                                            <span>${numberFormat(finalPrice * item.quantity)}</span>
+                                        </div>
+                                        <button class="view-btn" onclick="viewDetails(${item.id})" style="background: rgba(34, 211, 238, 0.15); color: var(--accent); border: 1px solid rgba(34, 211, 238, 0.3); padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                                            <i class="fas fa-eye"></i> نمایش
                                         </button>
-                                        <button class="remove-btn" onclick="removeItem(${item.id})">
-                                            <i class="fas fa-trash"></i>
-                                            حذف
+                                        <button class="remove-btn" onclick="removeItem(${item.id})" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 5px;">
+                                            <i class="fas fa-trash"></i> حذف
                                         </button>
                                     </div>
                                 </div>
@@ -712,40 +803,26 @@
             }
 
             function updateTotals() {
-                cart.total = cart.items.reduce((sum, item) => {
-                    const finalPrice = item.price - (item.price * (item.discount / 100));
-                    return sum + finalPrice;
+                const total = cart.items.reduce((sum, item) => {
+                    return sum + (item.final_price * item.quantity);
                 }, 0);
+                cart.total = total;
                 cart.discount = 0;
 
-                // Update cart count
                 document.getElementById('cart-count').textContent = cart.items.length;
-
-                // Update totals display
                 document.getElementById('cart-total').innerHTML = '<span class="currency">تومان</span><span>' +
-                    numberFormat(cart.total) + '</span>';
+                    numberFormat(total) + '</span>';
                 document.getElementById('cart-discount').innerHTML = '<span class="currency">تومان</span><span>' +
-                    numberFormat(cart.discount) + '</span>';
+                    numberFormat(0) + '</span>';
                 document.getElementById('cart-final-total').innerHTML =
-                    '<span class="currency">تومان</span><span>' + numberFormat(cart.total - cart.discount) +
-                    '</span>';
+                    '<span class="currency">تومان</span><span>' + numberFormat(total) + '</span>';
             }
 
-            // Number formatting function
             function numberFormat(num) {
                 return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
             }
 
-            // Checkout button handler
-            document.getElementById('checkout-btn').addEventListener('click', function() {
-                if (cart.items.length === 0) {
-                    alert('سبد خرید شما خالی است!');
-                    return;
-                }
-                alert('در حال انتقال به صفحه پرداخت...');
-            });
-
-            // Add discount code functionality
+            // ----- کد تخفیف -----
             window.applyDiscount = function() {
                 const discountCode = document.getElementById('discount-code').value.trim();
                 const messageElement = document.getElementById('discount-message');
@@ -755,29 +832,42 @@
                     return;
                 }
 
-                // اینجا می‌توانید کد تخفیف را با سرور چک کنید
-                // فعلاً برای مثال، کد "DISCOUNT20" را قبول می‌کنیم
-                if (discountCode === 'DISCOUNT20') {
-                    cart.discount = Math.floor(cart.total * 0.2); // 20% تخفیف
-                    showDiscountMessage('کد تخفیف با موفقیت اعمال شد', 'success');
-                    updateTotals();
-                } else {
-                    showDiscountMessage('کد تخفیف نامعتبر است', 'error');
-                }
+                $.ajax({
+                    url: '{{ route('discount.apply') }}',
+                    type: 'POST',
+                    data: {
+                        _token: '{{ csrf_token() }}',
+                        code: discountCode,
+                        total: cart.total
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            cart.discount = response.discount_amount;
+                            showDiscountMessage(response.message, 'success');
+                            updateTotals();
+                        } else {
+                            showDiscountMessage(response.message, 'error');
+                        }
+                    },
+                    error: function() {
+                        showDiscountMessage('خطا در ارتباط با سرور', 'error');
+                    }
+                });
             };
 
             function showDiscountMessage(message, type) {
                 const messageElement = document.getElementById('discount-message');
                 messageElement.textContent = message;
                 messageElement.className = 'discount-message ' + type;
-
-                // پاک کردن پیام بعد از 3 ثانیه
                 setTimeout(() => {
                     messageElement.className = 'discount-message';
                 }, 3000);
             }
 
-            // اضافه کردن قابلیت فشردن Enter برای اعمال کد تخفیف
+            function showToast(message, type) {
+                alert(message);
+            }
+
             document.getElementById('discount-code').addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     applyDiscount();
@@ -788,4 +878,3 @@
 </body>
 
 </html>
-```

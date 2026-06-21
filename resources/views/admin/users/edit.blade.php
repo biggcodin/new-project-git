@@ -289,8 +289,18 @@
                     <div class="form-group">
                         <label class="form-label">نقش</label>
                         <select name="role" required>
-                            <option value="user" {{ $user->role == 'user' ? 'selected' : '' }}>کاربر</option>
-                            <option value="admin" {{ $user->role == 'admin' ? 'selected' : '' }}>ادمین</option>
+                            @foreach ($roles as $role)
+                                <option value="{{ $role }}" {{ $user->role == $role ? 'selected' : '' }}>
+                                    {{ match ($role) {
+                                        'super_admin' => 'سوپر ادمین',
+                                        'admin' => 'ادمین',
+                                        'seller' => 'فروشنده',
+                                        'buyer' => 'خریدار',
+                                        'user' => 'کاربر عادی',
+                                        default => $role,
+                                    } }}
+                                </option>
+                            @endforeach
                         </select>
                         @error('role')
                             <div class="text-danger">{{ $message }}</div>
