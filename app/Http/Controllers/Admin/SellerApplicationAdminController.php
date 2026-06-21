@@ -14,13 +14,13 @@ class SellerApplicationAdminController extends Controller
      * نمایش لیست درخواست‌های فروشندگی
      */
     public function index()
-    {
-        $applications = SellerApplication::with(['user', 'subSubcategory'])
-            ->orderBy('created_at', 'desc')
-            ->paginate(15);
+{
+    $applications = SellerApplication::with(['user', 'subSubcategory'])
+        ->orderBy('created_at', 'desc')
+        ->paginate(15);
 
-        return view('admin.seller-applications.index', compact('applications'));
-    }
+    return view('admin.seller-applications.index', compact('applications'));
+}
 
     /**
      * نمایش جزئیات یک درخواست

@@ -8,6 +8,7 @@ use App\Models\CustomField;
 use App\Models\Category;
 use App\Models\Subcategory;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -71,7 +72,15 @@ class SellerApplicationController extends Controller
             'is_adult' => 'required|in:yes,no',
             'first_name' => 'required|string|max:100',
             'last_name' => 'required|string|max:100',
-            'national_code' => 'required|string|size:10|unique:seller_applications,national_code',
+            'national_code' => [
+                'required',
+                'string',
+                'size:10',
+                // فقط درخواست‌های pending یا approved مانع ثبت مجدد می‌شوند
+                Rule::unique('seller_applications', 'national_code')->where(function ($query) {
+                    return $query->whereIn('status', ['pending', 'approved']);
+                }),
+            ],
             'phone' => 'required|string|max:20',
             'birth_date' => 'required|string|max:20',
             'card_number' => 'required|string|max:20',
@@ -80,6 +89,18 @@ class SellerApplicationController extends Controller
             'sub_subcategory_id' => 'required|exists:sub_subcategories,id',
             'attributes' => 'nullable|array',
         ]);
+
+        // بررسی اینکه آیا کاربر قبلاً برای این نوع بازی درخواست pending یا approved دارد
+        $existingApplication = SellerApplication::where('user_id', Auth::id())
+            ->where('sub_subcategory_id', $request->sub_subcategory_id)
+            ->whereIn('status', ['pending', 'approved'])
+            ->exists();
+
+        if ($existingApplication) {
+            return back()
+                ->withInput()
+                ->with('error', 'شما قبلاً برای این نوع بازی درخواست ثبت کرده‌اید و در حال بررسی یا تأیید شده است.');
+        }
 
         // ذخیره تصویر کارت ملی
         $imagePath = $request->file('id_card_image')->store('seller_documents/national_cards', 'public');
