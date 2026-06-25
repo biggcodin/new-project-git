@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\UserAccountController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CategoryController;
@@ -15,7 +14,7 @@ use App\Http\Controllers\VideoController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\Admin\ProductApprovalController;
 use App\Http\Controllers\Admin\UserApprovalController;
-use App\Http\Controllers\Admin\SellerApplicationAdminController; // <-- اضافه شد
+use App\Http\Controllers\Admin\SellerApplicationAdminController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\DiscountController;
@@ -59,11 +58,6 @@ Route::prefix('user')->middleware('auth')->group(function () {
         return view('user.user-panel');
     })->name('user.panel');
 
-    // ----- مدیریت حساب کاربری (اکانت) -----
-    Route::get('/account', fn () => redirect()->route('user.account.create'))->name('user.account');
-    Route::get('/account/create', [UserAccountController::class, 'create'])->name('user.account.create');
-    Route::post('/account', [UserAccountController::class, 'store'])->name('user.account.store');
-
     // ----- کیف پول (شارژ، تاریخچه) -----
     Route::get('/wallet/charge', [UserController::class, 'walletCharge'])->name('wallet.charge');
     Route::post('/wallet/charge', [UserController::class, 'charge'])->name('wallet.charge.submit');
@@ -78,6 +72,12 @@ Route::prefix('user')->middleware('auth')->group(function () {
     Route::get('/chat', [UserController::class, 'chat'])->name('user.chat');
     Route::get('/profile/edit', [UserController::class, 'profileEdit'])->name('user.profile.edit');
     Route::put('/profile', [UserController::class, 'profileUpdate'])->name('user.profile.update');
+
+    // ----- مدیریت درخواست‌های محصولات (آگهی‌ها) -----
+    Route::prefix('product-application')->name('user.product-application.')->group(function () {
+        Route::get('/{application}/edit', [UserController::class, 'editProductApplication'])->name('edit');
+        Route::put('/{application}', [UserController::class, 'updateProductApplication'])->name('update');
+    });
 
     // ----- 🛒 سبد خرید (مدیریت آیتم‌ها) -----
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
@@ -103,10 +103,15 @@ Route::prefix('user')->middleware('auth')->group(function () {
 // 📝 مسیرهای فرم ویزارد درخواست فروش اکانت (جدید)
 // ======================================================================
 Route::prefix('seller/product-request')->name('seller.product.request.')->middleware('auth')->group(function () {
-    Route::get('/', [SellerApplicationController::class, 'index'])->name('index');
+    Route::get('/', [SellerApplicationController::class, 'createProduct'])->name('index');
     Route::post('/store', [SellerApplicationController::class, 'store'])->name('store');
     Route::get('/get-fields', [SellerApplicationController::class, 'getFields'])->name('getFields');
 });
+
+// مسیر مستقل برای ثبت آگهی جدید (ویزارد ۳ مرحله‌ای)
+Route::get('/seller/product/create', [SellerApplicationController::class, 'createProduct'])
+    ->name('seller.product.create')
+    ->middleware('auth');
 
 // ======================================================================
 // 🔄 هدایت آدرس‌های اشتباه (سازگاری با نسخه‌های قبلی)
@@ -148,10 +153,33 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // ----- داشبورد مدیریت -----
     Route::get('/dashboard', [HomeController::class, 'adminDashboard'])->name('dashboard');
 
-    // ----- مدیریت تایید محصولات -----
+    // ----- مدیریت تایید محصولات (قدیمی - قابل حذف یا نگهداری) -----
     Route::get('/pending-products', [ProductApprovalController::class, 'index'])->name('pending.products');
     Route::post('/pending-products/{product}/approve', [ProductApprovalController::class, 'approve'])->name('pending.products.approve');
     Route::post('/pending-products/{product}/reject', [ProductApprovalController::class, 'reject'])->name('pending.products.reject');
+
+    // ================================================================
+    // 🆕 مدیریت یکپارچه فروشندگان (هویت + محصولات)
+    // ================================================================
+    Route::prefix('seller-applications')->name('seller.applications.')->group(function () {
+        Route::get('/', [SellerApplicationAdminController::class, 'index'])->name('index');
+
+        // مدیریت هویت
+        Route::post('/{application}/approve-identity', [SellerApplicationAdminController::class, 'approveIdentity'])->name('approve-identity');
+        Route::post('/{application}/reject-identity', [SellerApplicationAdminController::class, 'rejectIdentity'])->name('reject-identity');
+        Route::get('/{application}/show-identity', [SellerApplicationAdminController::class, 'showIdentity'])->name('show-identity');
+        Route::delete('/{application}', [SellerApplicationAdminController::class, 'destroyIdentity'])->name('destroy-identity');
+    });
+
+    // ================================================================
+    // 🆕 مدیریت محصولات (آگهی‌ها) – برای تأیید/رد جداگانه
+    // ================================================================
+    Route::prefix('products')->name('products.')->group(function () {
+        Route::post('/{product}/approve', [SellerApplicationAdminController::class, 'approveProduct'])->name('approve');
+        Route::post('/{product}/reject', [SellerApplicationAdminController::class, 'rejectProduct'])->name('reject');
+        Route::get('/{product}/show', [SellerApplicationAdminController::class, 'showProduct'])->name('show');
+        Route::delete('/{product}', [SellerApplicationAdminController::class, 'destroyProduct'])->name('destroy');
+    });
 
     // ----- مدیریت کاربران -----
     Route::get('/pending-users', [UserApprovalController::class, 'pendingIndex'])->name('pending.users');
@@ -162,19 +190,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/users/{user}/edit', [UserApprovalController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserApprovalController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserApprovalController::class, 'destroy'])->name('users.destroy');
-
-    // ================================================================
-    // 🆕 مدیریت درخواست‌های فروشندگی (جدید)
-    // ================================================================
-    Route::prefix('seller-applications')->name('seller.applications.')->group(function () {
-        Route::get('/', [SellerApplicationAdminController::class, 'index'])->name('index');
-        Route::get('/{application}', [SellerApplicationAdminController::class, 'show'])->name('show');
-        Route::post('/{application}/approve', [SellerApplicationAdminController::class, 'approve'])->name('approve');
-        Route::post('/{application}/reject', [SellerApplicationAdminController::class, 'reject'])->name('reject');
-        Route::delete('/{application}', [SellerApplicationAdminController::class, 'destroy'])->name('destroy');
-    });
-
-    // ================================================================
 
     // ----- مدیریت دسته‌بندی‌ها (Categories) -----
     Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
@@ -209,12 +224,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // ----- مدیریت ویدیوها -----
     Route::resource('videos', VideoController::class);
 
-    // ----- مدیریت محصولات (در پنل ادمین) -----
+    // ----- مدیریت محصولات (لیست و مدیریت در پنل ادمین) -----
     Route::get('/products', [ProductController::class, 'index'])->name('products.index');
     Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
     Route::post('/products', [ProductController::class, 'store'])->name('products.store');
     Route::get('/products/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
-    Route::delete('/products/media/{id}', [ProductController::class, 'destroyMedia'])->name('admin.products.destroyMedia');
+    Route::delete('/products/media/{id}', [ProductController::class, 'destroyMedia'])->name('products.destroyMedia');
     Route::put('/products/{product}', [ProductController::class, 'update'])->name('products.update');
     Route::delete('/products/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
     Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');

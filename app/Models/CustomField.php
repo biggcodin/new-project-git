@@ -45,6 +45,16 @@ class CustomField extends Model
         return $this->belongsTo(SubSubcategory::class)->withDefault();
     }
 
+
+    // ویژگی منحصر به فرد برای هر بازی
+    public static function getUniqueFieldKeyForSubSubcategory($subSubcategoryId): ?string
+{
+    $field = self::where('sub_subcategory_id', $subSubcategoryId)
+        ->where('is_unique', true)
+        ->first();
+    return $field ? $field->key : null;
+}
+
     // اسکوپ‌های کاربردی
     public function scopeActive($query)
     {

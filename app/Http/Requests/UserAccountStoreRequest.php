@@ -8,17 +8,17 @@ class UserAccountStoreRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check(); // کاربر باید لاگین باشد
+        return auth()->check();
     }
 
     public function rules(): array
     {
         return [
-            'title'              => 'required|string|max:255',
+            'name'               => 'required|string|max:255',   // قبلاً title
             'price'              => 'required|numeric|min:0',
             'description'        => 'nullable|string',
-            'discount'           => 'nullable|numeric|min:0|max:100',
-            'stock_status'       => 'required|in:in_stock,out_of_stock,pre_order',
+            'discount_price'     => 'nullable|numeric|min:0|lt:price', // قبلاً discount
+            'quantity'           => 'required|integer|min:0',    // قبلاً stock_status
             'sub_subcategory_id' => 'required|exists:sub_subcategories,id',
             'attributes'         => 'nullable|array',
             'attributes.*'       => 'nullable',
@@ -33,8 +33,10 @@ class UserAccountStoreRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'title.required' => 'عنوان الزامی است.',
+            'name.required' => 'عنوان الزامی است.',
             'price.required' => 'قیمت الزامی است.',
+            'quantity.required' => 'موجودی الزامی است.',
+            'discount_price.lt' => 'قیمت تخفیفی باید کمتر از قیمت اصلی باشد.',
         ];
     }
 }

@@ -165,4 +165,10 @@ public function hasPendingSellerApplication(): bool
 {
     return $this->sellerApplications()->where('status', 'pending')->exists();
 }
+
+// در app/Models/User.php
+public function hasApprovedIdentity(): bool
+{
+    return $this->isSeller() || $this->seller_request_status === 'approved';
+}
 }

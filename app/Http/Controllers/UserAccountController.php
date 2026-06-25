@@ -35,11 +35,11 @@ class UserAccountController extends Controller
         DB::beginTransaction();
         try {
             $product = Product::create([
-                'title'              => $request->title,
+                'name'               => $request->name,              // تغییر از title
                 'price'              => $request->price,
                 'description'        => $request->description,
-                'discount'           => $request->discount ?? 0,
-                'stock_status'       => $request->stock_status,
+                'discount_price'     => $request->discount_price ?? null, // تغییر از discount
+                'quantity'           => $request->quantity,          // تغییر از stock_status
                 'category_id'        => $subSubcategory->subcategory->category->id,
                 'subcategory_id'     => $subSubcategory->subcategory->id,
                 'sub_subcategory_id' => $subSubcategory->id,
@@ -52,13 +52,15 @@ class UserAccountController extends Controller
                 $product->tags()->sync($request->tags);
             }
 
-            // ویژگی‌ها
+            // ویژگی‌های اختصاصی (attributes)
             $attributes = $request->input('attributes', []);
             foreach ($attributes as $key => $value) {
-                $product->attributes()->create([
-                    'key'   => $key,
-                    'value' => is_array($value) ? json_encode($value) : (string)$value,
-                ]);
+                if (!empty($value)) {
+                    $product->attributes()->create([
+                        'key'   => $key,
+                        'value' => is_array($value) ? json_encode($value) : (string)$value,
+                    ]);
+                }
             }
 
             // کاور
