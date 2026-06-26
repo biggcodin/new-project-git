@@ -175,7 +175,8 @@ class SellerApplicationAdminController extends Controller
 
             // در صورت نیاز، پیام ادمین را در متا ذخیره کن
             if ($request->filled('admin_message')) {
-                $meta = $product->meta ?? [];
+                // تبدیل ایمن meta به آرایه
+                $meta = $this->safeMeta($product->meta);
                 $meta['admin_message'] = $request->admin_message;
                 $product->update(['meta' => $meta]);
             }
@@ -214,7 +215,7 @@ class SellerApplicationAdminController extends Controller
             ]);
 
             // ذخیره پیام ادمین در متا
-            $meta = $product->meta ?? [];
+            $meta = $this->safeMeta($product->meta);
             $meta['admin_message'] = $request->admin_message ?? 'آگهی شما رد شد.';
             $product->update(['meta' => $meta]);
 
@@ -260,5 +261,23 @@ class SellerApplicationAdminController extends Controller
 
         return redirect()->route('admin.seller.applications.index')
             ->with('success', 'آگهی با موفقیت حذف شد.');
+    }
+
+    /**
+     * تبدیل ایمن meta به آرایه
+     *
+     * @param mixed $meta
+     * @return array
+     */
+    private function safeMeta($meta): array
+    {
+        if (is_array($meta)) {
+            return $meta;
+        }
+        if (is_string($meta)) {
+            $decoded = json_decode($meta, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
     }
 }

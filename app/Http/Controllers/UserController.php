@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\WalletChargeRequest;
 use App\Models\Product;
+use App\Models\ProductMedia;
 use App\Models\SubSubcategory;
 use App\Models\WalletTransaction;
 use App\Models\Order;
@@ -203,8 +204,15 @@ class UserController extends Controller
                 ->with('error', 'فقط آگهی‌های ردشده قابل ویرایش هستند.');
         }
 
-        // اعتبارسنجی
+        // ====== تبدیل tags از JSON به آرایه (قبل از اعتبارسنجی) ======
+        if ($request->has('tags')) {
+            $tags = json_decode($request->tags, true);
+            $request->merge(['tags' => is_array($tags) ? $tags : []]);
+        }
+
+        // ====== اعتبارسنجی ======
         $validated = $request->validate([
+            'sub_subcategory_id' => 'required|exists:sub_subcategories,id',
             'name'               => 'required|string|max:255',
             'price'              => 'required|numeric|min:0',
             'quantity'           => 'required|integer|min:0',
@@ -214,16 +222,31 @@ class UserController extends Controller
             'tags'               => 'nullable|array',
             'tags.*'             => 'integer|exists:tags,id',
             'attributes'         => 'nullable|array',
+            'remove_cover'       => 'nullable|boolean',
         ]);
+
+        // دریافت زیرزیردسته جدید برای به‌روزرسانی دسته‌بندی
+        $subSub = SubSubcategory::with('subcategory.category')->findOrFail($request->sub_subcategory_id);
 
         DB::beginTransaction();
 
         try {
-            // به‌روزرسانی فیلدهای اصلی
+            // به‌روزرسانی فیلدهای اصلی و دسته‌بندی
+            $product->sub_subcategory_id = $request->sub_subcategory_id;
+            $product->category_id = $subSub->subcategory->category->id;
+            $product->subcategory_id = $subSub->subcategory->id;
             $product->name = $request->name;
             $product->price = $request->price;
             $product->quantity = $request->quantity;
             $product->description = $request->description;
+
+            // حذف کاور در صورت درخواست
+            if ($request->boolean('remove_cover')) {
+                if ($product->cover) {
+                    Storage::disk('public')->delete($product->cover);
+                    $product->cover = null;
+                }
+            }
 
             // آپلود کاور جدید (در صورت وجود)
             if ($request->hasFile('cover')) {
@@ -234,13 +257,10 @@ class UserController extends Controller
                 $product->cover = $coverPath;
             }
 
-            // آپلود مدیاهای جدید (در صورت وجود)
+            $product->save(); // ذخیره اولیه برای دسته‌بندی و کاور
+
+            // آپلود مدیاهای جدید (فقط اضافه می‌شوند، حذف جداگانه انجام می‌شود)
             if ($request->hasFile('media')) {
-                // حذف مدیاهای قبلی
-                foreach ($product->media as $media) {
-                    Storage::disk('public')->delete($media->file_path);
-                    $media->delete();
-                }
                 foreach ($request->file('media') as $file) {
                     $path = $file->store('products_media', 'public');
                     $product->media()->create([
@@ -258,7 +278,6 @@ class UserController extends Controller
             }
 
             // بروزرسانی ویژگی‌های اختصاصی (attributes)
-            // ابتدا ویژگی‌های قبلی را حذف می‌کنیم
             $product->attributes()->delete();
             $attributes = $request->input('attributes', []);
             foreach ($attributes as $key => $value) {
@@ -273,9 +292,12 @@ class UserController extends Controller
             // تغییر وضعیت به pending و پاک کردن دلیل رد
             $product->status = 'pending';
             $product->rejection_reason = null;
-            $meta = $product->meta ?? [];
+
+            // ====== اصلاح بخش meta ======
+            $meta = $this->safeMeta($product->meta);
             unset($meta['admin_message']);
             $product->meta = $meta;
+
             $product->save();
 
             DB::commit();
@@ -287,6 +309,24 @@ class UserController extends Controller
             DB::rollBack();
             return back()->withInput()->with('error', 'خطا در ویرایش آگهی: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * حذف یک فایل رسانه (برای کاربر عادی)
+     */
+    public function destroyMedia($id)
+    {
+        $media = ProductMedia::findOrFail($id);
+
+        // بررسی مالکیت محصول
+        if ($media->product->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        Storage::disk('public')->delete($media->file_path);
+        $media->delete();
+
+        return response()->json(['success' => true]);
     }
 
     // ======================== سایر متدها ========================
@@ -313,5 +353,23 @@ class UserController extends Controller
     public function profileUpdate(Request $request)
     {
         return back()->with('success', 'پروفایل با موفقیت به‌روزرسانی شد.');
+    }
+
+    /**
+     * تبدیل ایمن meta به آرایه
+     *
+     * @param mixed $meta
+     * @return array
+     */
+    private function safeMeta($meta): array
+    {
+        if (is_array($meta)) {
+            return $meta;
+        }
+        if (is_string($meta)) {
+            $decoded = json_decode($meta, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
     }
 }

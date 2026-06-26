@@ -94,9 +94,10 @@
         }
 
         .card-title {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 600;
             margin: 0;
+            color:#10b981;
         }
 
         .badge-custom {
@@ -276,10 +277,20 @@
                         <span class="value">{{ $product->created_at->format('Y/m/d H:i') }}</span>
                     </div>
 
-                    @if ($product->status === 'rejected' && $product->rejection_reason)
+                    @if ($product->status === 'rejected')
                         <div class="reason-box">
                             <i class="fas fa-exclamation-circle"></i>
-                            <strong>دلیل رد:</strong> {{ $product->rejection_reason }}
+                            <strong>دلیل رد:</strong>
+                            @php
+                                $reason = $product->rejection_reason;
+                                if (empty($reason) && !empty($product->meta['admin_message'])) {
+                                    $reason = $product->meta['admin_message'];
+                                }
+                                if (empty($reason)) {
+                                    $reason = 'دلیلی ثبت نشده است.';
+                                }
+                            @endphp
+                            {{ $reason }}
                         </div>
                     @endif
 

@@ -74,10 +74,12 @@ Route::prefix('user')->middleware('auth')->group(function () {
     Route::put('/profile', [UserController::class, 'profileUpdate'])->name('user.profile.update');
 
     // ----- مدیریت درخواست‌های محصولات (آگهی‌ها) -----
-    Route::prefix('product-application')->name('user.product-application.')->group(function () {
-        Route::get('/{application}/edit', [UserController::class, 'editProductApplication'])->name('edit');
-        Route::put('/{application}', [UserController::class, 'updateProductApplication'])->name('update');
+        Route::prefix('product-application')->name('user.product-application.')->group(function () {
+        Route::get('/{product}/edit', [UserController::class, 'editProductApplication'])->name('edit');
+        Route::put('/{product}', [UserController::class, 'updateProductApplication'])->name('update');
     });
+     // ----- حذف رسانه آگهی (برای کاربر عادی) -----
+    Route::delete('/media/{media}', [UserController::class, 'destroyMedia'])->name('user.media.destroy');
 
     // ----- 🛒 سبد خرید (مدیریت آیتم‌ها) -----
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');

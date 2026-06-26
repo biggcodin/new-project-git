@@ -15,7 +15,8 @@ class Product extends Model
         'user_id', 'category_id', 'subcategory_id', 'sub_subcategory_id',
         'sku', 'name', 'slug', 'description', 'meta_title', 'meta_description',
         'cover', 'price', 'discount_price', 'quantity', 'status', 'featured',
-        'order', 'published_at', 'views'
+        'order', 'published_at', 'views','rejection_reason',
+    'meta',
     ];
 
     protected $attributes = [

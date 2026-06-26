@@ -18,13 +18,33 @@ use Illuminate\Support\Facades\DB;
 
 class SellerApplicationController extends Controller
 {
-    /**
-     * نمایش فرم ویزارد سه مرحله‌ای (احراز هویت + اطلاعات اکانت)
-     */
     public function createProduct()
     {
         if (!auth()->check()) {
             return redirect()->route('login')->with('error', 'لطفاً ابتدا وارد شوید.');
+        }
+
+        $user = auth()->user();
+
+        // ====== بررسی وضعیت هویت ======
+        $identityApproved = $user->hasApprovedIdentity() || $user->isSeller();
+        $identityData = null;
+        $identityRejected = false;
+
+        if ($identityApproved) {
+            $identityData = SellerApplication::where('user_id', $user->id)
+                ->where('status', 'approved')
+                ->latest()
+                ->first();
+        } else {
+            $rejectedIdentity = SellerApplication::where('user_id', $user->id)
+                ->where('status', 'rejected')
+                ->latest()
+                ->first();
+            if ($rejectedIdentity) {
+                $identityRejected = true;
+                $identityData = $rejectedIdentity;
+            }
         }
 
         $gameTypes = SubSubcategory::whereHas('subcategory', function ($q) {
@@ -35,12 +55,16 @@ class SellerApplicationController extends Controller
 
         $tags = Tag::orderBy('name')->get();
 
-        return view('seller.product.create', compact('gameTypes', 'tags'));
+        return view('seller.product.create', compact(
+            'gameTypes',
+            'tags',
+            'identityApproved',
+            'identityData',
+            'identityRejected'
+        ));
     }
 
-    /**
-     * دریافت فیلدهای اختصاصی برای نوع بازی انتخاب‌شده (AJAX)
-     */
+
     public function getFields(Request $request)
     {
         $request->validate([
@@ -54,32 +78,18 @@ class SellerApplicationController extends Controller
         return response()->json(['fields' => $fields]);
     }
 
-    /**
-     * ذخیره نهایی اطلاعات (هم هویت و هم محصول) – ویزارد سه مرحله‌ای
-     */
     public function store(Request $request)
     {
-        // ========== ۱. اعتبارسنجی ==========
-        $validated = $request->validate([
-            // ---------- بخش هویت ----------
-            'is_adult'           => 'required|in:yes,no',
-            'first_name'         => 'required|string|max:100',
-            'last_name'          => 'required|string|max:100',
-            'national_code'      => [
-                'required',
-                'string',
-                'size:10',
-                // یکتایی فقط در برابر درخواست‌های pending و approved (بدون در نظر گرفتن کاربر فعلی)
-                Rule::unique('seller_applications', 'national_code')->where(function ($query) {
-                    return $query->whereIn('status', ['pending', 'approved']);
-                }),
-            ],
-            'phone'              => 'required|string|max:20',
-            'birth_date'         => 'nullable|string|max:20',
-            'card_number'        => 'required|string|max:20',
-            'id_card_image'      => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        $user = auth()->user();
 
-            // ---------- بخش محصول ----------
+        // اگر کاربر فروشنده است، نیازی به احراز هویت مجدد نیست
+        $identityNotApproved = $request->boolean('identity_not_approved', !$user->hasApprovedIdentity());
+        if ($user->isSeller()) {
+            $identityNotApproved = false;
+        }
+
+        // اعتبارسنجی با شرط‌های پویا
+        $rules = [
             'sub_subcategory_id' => 'required|exists:sub_subcategories,id',
             'name'               => 'required|string|max:255',
             'price'              => 'required|numeric|min:0',
@@ -89,26 +99,30 @@ class SellerApplicationController extends Controller
             'media.*'            => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov,avi,mkv|max:20480',
             'tags'               => 'nullable|string',
             'attributes'         => 'nullable|array',
-        ]);
+        ];
 
-        // ========== ۲. بررسی وضعیت هویت کاربر ==========
-
-        // آیا کاربر قبلاً هویت تأییدشده دارد؟
-        if (auth()->user()->hasApprovedIdentity()) {
-            return back()->withInput()->with('error', 'شما قبلاً هویت خود را تأیید کرده‌اید و نیازی به ثبت مجدد ندارید.');
+        // اگر هویت تأیید نشده باشد، فیلدهای هویتی را اضافه کن
+        if ($identityNotApproved) {
+            $rules['is_adult'] = 'required|in:yes,no';
+            $rules['first_name'] = 'required|string|max:100';
+            $rules['last_name'] = 'required|string|max:100';
+            $rules['national_code'] = [
+                'required',
+                'string',
+                'size:10',
+                Rule::unique('seller_applications', 'national_code')->where(function ($query) {
+                    return $query->whereIn('status', ['pending', 'approved']);
+                }),
+            ];
+            $rules['phone'] = 'required|string|max:20';
+            $rules['card_number'] = 'required|string|max:20';
+            $rules['id_card_image'] = 'nullable|image|mimes:jpeg,png,jpg|max:2048';
         }
 
-        // آیا کاربر درخواست هویت در وضعیت pending یا approved دارد (برای هر نوع بازی)؟
-        $existingPendingOrApproved = SellerApplication::where('user_id', auth()->id())
-            ->whereIn('status', ['pending', 'approved'])
-            ->exists();
+        $validated = $request->validate($rules);
 
-        if ($existingPendingOrApproved) {
-            return back()->withInput()->with('error', 'شما قبلاً یک درخواست هویت در حال بررسی یا تأیید شده دارید. لطفاً منتظر بمانید.');
-        }
-
-        // ========== ۳. بررسی تکراری نبودن آگهی ==========
-        $existingProduct = Product::where('user_id', auth()->id())
+        // ========== بررسی تکراری نبودن آگهی ==========
+        $existingProduct = Product::where('user_id', $user->id)
             ->where('sub_subcategory_id', $request->sub_subcategory_id)
             ->where('status', 'pending')
             ->exists();
@@ -117,7 +131,7 @@ class SellerApplicationController extends Controller
             return back()->withInput()->with('error', 'شما قبلاً یک آگهی در انتظار بررسی برای این نوع بازی ثبت کرده‌اید.');
         }
 
-        // ========== ۴. بررسی فیلد یکتا (is_unique) ==========
+        // ========== بررسی فیلد یکتا ==========
         $uniqueKey = CustomField::getUniqueFieldKeyForSubSubcategory($request->sub_subcategory_id);
         if ($uniqueKey) {
             $uniqueValue = $request->attributes[$uniqueKey] ?? null;
@@ -132,81 +146,75 @@ class SellerApplicationController extends Controller
             }
         }
 
-        // ========== ۵. مدیریت درخواست هویت ==========
-
-        // آیا کاربر درخواست ردشده برای این sub_subcategory دارد؟
-        $rejectedApplication = SellerApplication::where('user_id', auth()->id())
-            ->where('sub_subcategory_id', $request->sub_subcategory_id)
-            ->where('status', 'rejected')
-            ->latest()
-            ->first();
-
         DB::beginTransaction();
 
         try {
-            if ($rejectedApplication) {
-                // ✅ ویرایش درخواست ردشده
-                $imagePath = $rejectedApplication->national_card_image;
-                if ($request->hasFile('id_card_image')) {
-                    if ($imagePath) {
-                        Storage::disk('public')->delete($imagePath);
+            // ========== مدیریت هویت (فقط در صورت عدم تأیید) ==========
+            if ($identityNotApproved) {
+                $rejectedApplication = SellerApplication::where('user_id', $user->id)
+                    ->where('sub_subcategory_id', $request->sub_subcategory_id)
+                    ->where('status', 'rejected')
+                    ->latest()
+                    ->first();
+
+                if ($rejectedApplication) {
+                    $imagePath = $rejectedApplication->national_card_image;
+                    if ($request->hasFile('id_card_image')) {
+                        if ($imagePath) {
+                            Storage::disk('public')->delete($imagePath);
+                        }
+                        $imagePath = $request->file('id_card_image')->store('seller_documents/national_cards', 'public');
                     }
-                    $imagePath = $request->file('id_card_image')->store('seller_documents/national_cards', 'public');
+
+                    $rejectedApplication->update([
+                        'is_over_18'           => $request->is_adult === 'yes',
+                        'first_name'           => $request->first_name,
+                        'last_name'            => $request->last_name,
+                        'national_code'        => $request->national_code,
+                        'phone'                => $request->phone,
+                        'birth_date'           => $request->birth_date,
+                        'bank_card_number'     => $request->card_number,
+                        'national_card_image'  => $imagePath,
+                        'sub_subcategory_id'   => $request->sub_subcategory_id,
+                        'custom_fields_data'   => $request->attributes ?? [],
+                        'status'               => 'pending',
+                        'rejection_reason'     => null,
+                        'admin_message'        => null,
+                        'admin_id'             => null,
+                        'reviewed_at'          => null,
+                    ]);
+                } else {
+                    $imagePath = null;
+                    if ($request->hasFile('id_card_image')) {
+                        $imagePath = $request->file('id_card_image')->store('seller_documents/national_cards', 'public');
+                    }
+
+                    SellerApplication::create([
+                        'user_id'              => $user->id,
+                        'is_over_18'           => $request->is_adult === 'yes',
+                        'first_name'           => $request->first_name,
+                        'last_name'            => $request->last_name,
+                        'national_code'        => $request->national_code,
+                        'phone'                => $request->phone,
+                        'birth_date'           => $request->birth_date,
+                        'bank_card_number'     => $request->card_number,
+                        'national_card_image'  => $imagePath,
+                        'sub_subcategory_id'   => $request->sub_subcategory_id,
+                        'custom_fields_data'   => $request->attributes ?? [],
+                        'status'               => 'pending',
+                    ]);
                 }
 
-                $rejectedApplication->update([
-                    'is_over_18'           => $request->is_adult === 'yes',
-                    'first_name'           => $request->first_name,
-                    'last_name'            => $request->last_name,
-                    'national_code'        => $request->national_code,
-                    'phone'                => $request->phone,
-                    'birth_date'           => $request->birth_date,
-                    'bank_card_number'     => $request->card_number,
-                    'national_card_image'  => $imagePath,
-                    'sub_subcategory_id'   => $request->sub_subcategory_id,
-                    'custom_fields_data'   => $request->attributes ?? [],
-                    'status'               => 'pending',
-                    'rejection_reason'     => null,
-                    'admin_message'        => null,
-                    'admin_id'             => null,
-                    'reviewed_at'          => null,
-                ]);
-
-                $identity = $rejectedApplication;
-            } else {
-                // 🆕 ایجاد درخواست جدید
-                $imagePath = null;
-                if ($request->hasFile('id_card_image')) {
-                    $imagePath = $request->file('id_card_image')->store('seller_documents/national_cards', 'public');
-                }
-
-                $identity = SellerApplication::create([
-                    'user_id'              => auth()->id(),
-                    'is_over_18'           => $request->is_adult === 'yes',
-                    'first_name'           => $request->first_name,
-                    'last_name'            => $request->last_name,
-                    'national_code'        => $request->national_code,
-                    'phone'                => $request->phone,
-                    'birth_date'           => $request->birth_date,
-                    'bank_card_number'     => $request->card_number,
-                    'national_card_image'  => $imagePath,
-                    'sub_subcategory_id'   => $request->sub_subcategory_id,
-                    'custom_fields_data'   => $request->attributes ?? [],
-                    'status'               => 'pending',
-                ]);
+                $user->update(['seller_request_status' => 'pending']);
             }
 
-            // به‌روزرسانی seller_request_status در جدول users
-            auth()->user()->update(['seller_request_status' => 'pending']);
-
-            // ========== ۶. ذخیره محصول (آگهی) ==========
+            // ========== ذخیره محصول ==========
             $subSub = SubSubcategory::with('subcategory.category')->findOrFail($request->sub_subcategory_id);
-
             $coverPath = $request->file('cover')->store('products', 'public');
             $slug = $this->generateUniqueSlug($request->name);
 
             $product = Product::create([
-                'user_id'            => auth()->id(),
+                'user_id'            => $user->id,
                 'category_id'        => $subSub->subcategory->category->id,
                 'subcategory_id'     => $subSub->subcategory->id,
                 'sub_subcategory_id' => $subSub->id,
@@ -263,9 +271,6 @@ class SellerApplicationController extends Controller
         }
     }
 
-    /**
-     * تولید slug یکتا برای محصول
-     */
     private function generateUniqueSlug(string $name, ?int $ignoreId = null): string
     {
         $slug = Str::slug($name);
