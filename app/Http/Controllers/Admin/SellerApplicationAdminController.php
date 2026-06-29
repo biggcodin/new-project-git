@@ -16,72 +16,14 @@ class SellerApplicationAdminController extends Controller
      * نمایش لیست یکپارچه کاربران + وضعیت هویتی + محصولات
      * با قابلیت جستجو، فیلتر و مرتب‌سازی بر اساس آخرین درخواست
      */
-    public function index(Request $request)
-    {
-        $query = User::query();
+    public function index()
+{
+    $applications = SellerApplication::with(['user', 'subSubcategory'])
+        ->orderBy('created_at', 'desc')
+        ->paginate(15);
 
-        // ========== فیلترها ==========
-        // جستجو در نام کاربر، نام‌کاربری و نام محصول
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                ->orWhere('username', 'like', "%{$search}%")
-                ->orWhereHas('products', function ($pq) use ($search) {
-                    $pq->where('name', 'like', "%{$search}%");
-                });
-            });
-        }
-
-        // فیلتر وضعیت هویت (بر اساس آخرین درخواست)
-        if ($identityStatus = $request->input('identity_status')) {
-            if ($identityStatus === 'none') {
-                // کاربرانی که هیچ درخواست هویتی ندارند
-                $query->whereDoesntHave('sellerApplications');
-            } else {
-                $query->whereHas('sellerApplications', function ($sq) use ($identityStatus) {
-                    $sq->where('status', $identityStatus);
-                });
-            }
-        }
-
-        // فیلتر وضعیت محصول (کاربرانی که حداقل یک محصول با این وضعیت دارند)
-        if ($productStatus = $request->input('product_status')) {
-            $query->whereHas('products', function ($pq) use ($productStatus) {
-                $pq->where('status', $productStatus);
-            });
-        }
-
-        // ========== مرتب‌سازی ==========
-        // مرتب‌سازی بر اساس جدیدترین درخواست هویت (زمان ایجاد آخرین seller_application)
-        $query->orderBy(
-            SellerApplication::select('created_at')
-                ->whereColumn('user_id', 'users.id')
-                ->latest()
-                ->limit(1),
-            'desc'
-        );
-
-        // ========== بارگذاری روابط ==========
-        $users = $query
-            ->with([
-                'sellerApplications' => function ($q) {
-                    $q->latest(); // آخرین درخواست هویت
-                },
-                'products' => function ($q) {
-                    $q->with([
-                        'category',
-                        'subcategory',
-                        'subSubcategory',
-                        'attributes',
-                        'media'
-                    ])->orderBy('created_at', 'desc');
-                }
-            ])
-            ->paginate(15)
-            ->appends($request->query()); // حفظ فیلترها در صفحه‌بندی
-
-        return view('admin.seller-applications.index', compact('users'));
-    }
+    return view('admin.seller-applications.index', compact('applications'));
+}
 
     /**
      * نمایش جزئیات یک درخواست هویت (مودال یا صفحه)

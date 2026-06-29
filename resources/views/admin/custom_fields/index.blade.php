@@ -632,12 +632,21 @@
                         <div class="mb-3">
                             <label class="form-label">${field.label}</label>
                             ${field.type === 'select' ? `
+<<<<<<< HEAD
                                                                                 <select name="attributes[${key}]" class="form-control">
                                                                                     ${field.options.map(opt => `<option>${opt}</option>`).join('')}
                                                                                 </select>
                                                                             ` : `
                                                                                 <input type="${field.type}" name="attributes[${key}]" class="form-control" value="">
                                                                             `}
+=======
+                                                                <select name="attributes[${key}]" class="form-control">
+                                                                    ${field.options.map(opt => `<option>${opt}</option>`).join('')}
+                                                                </select>
+                                                            ` : `
+                                                                <input type="${field.type}" name="attributes[${key}]" class="form-control" value="">
+                                                            `}
+>>>>>>> clean-version
                         </div>`;
                     }
                 })

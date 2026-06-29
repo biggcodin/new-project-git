@@ -23,6 +23,7 @@ class SellerApplication extends Model
         'custom_fields_data',
         'status',
         'admin_message',
+        'rejection_reason', // ✅ اضافه شد
         'admin_id',
         'reviewed_at',
     ];
@@ -32,6 +33,7 @@ class SellerApplication extends Model
         'birth_date' => 'date',
         'custom_fields_data' => 'array',
         'reviewed_at' => 'datetime',
+        'rejection_reason' => 'string', // ✅ اضافه شد
     ];
 
     // ============== روابط ==============
@@ -76,5 +78,30 @@ class SellerApplication extends Model
             'rejected' => 'رد شده',
             default    => 'نامشخص',
         };
+    }
+
+    /**
+     * دریافت دلیل رد (اگر وجود داشته باشد)
+     */
+    public function getRejectionReason(): ?string
+    {
+        return $this->rejection_reason;
+    }
+
+    /**
+     * بررسی اینکه آیا درخواست بررسی شده است یا خیر
+     */
+    public function hasBeenReviewed(): bool
+    {
+        return !is_null($this->reviewed_at);
+    }
+
+    /**
+     * بررسی اینکه آیا کاربر می‌تواند این درخواست را ویرایش کند
+     * (فقط در صورتی که رد شده باشد)
+     */
+    public function canBeEdited(): bool
+    {
+        return $this->isRejected();
     }
 }

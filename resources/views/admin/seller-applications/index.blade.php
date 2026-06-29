@@ -1095,8 +1095,12 @@
                                                     <div class="detail-row"
                                                         style="flex-direction:column;align-items:stretch;gap:5px;">
                                                         <div class="detail-label" style="width:100%;">رسانه‌ها
+<<<<<<< HEAD
                                                             ({{ $prod->media->count() }})
                                                         </div>
+=======
+                                                            ({{ $prod->media->count() }})</div>
+>>>>>>> clean-version
                                                         <div class="detail-value" style="width:100%;">
                                                             <div class="media-grid">
                                                                 @foreach ($prod->media as $media)

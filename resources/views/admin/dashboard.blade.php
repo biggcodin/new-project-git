@@ -42,7 +42,6 @@
             line-height: 1.6;
         }
 
-        /* Layout */
         .container-fluid {
             padding: 0;
         }
@@ -445,12 +444,6 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        .stock-status.pre-order {
-            background: rgba(245, 158, 11, 0.15);
-            color: #fbbf24;
-            border: 1px solid rgba(245, 158, 11, 0.3);
-        }
-
         .product-actions {
             display: flex;
             gap: 8px;
@@ -543,7 +536,6 @@
             line-height: 1.6;
         }
 
-        /* Empty State */
         .empty-state {
             padding: 40px;
             text-align: center;
@@ -556,7 +548,6 @@
             opacity: 0.3;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .sidebar {
                 position: static;
@@ -581,7 +572,6 @@
             }
         }
 
-        /* Scrollbar Styling */
         ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
@@ -665,16 +655,8 @@
                             <span>درخواست‌های فروشندگی</span>
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{{ route('admin.pending.products') }}">
-                            <i class="fas fa-clock"></i>
-                            <span>محصولات در لیست انتظار</span>
-                        </a>
-                    </li>
                 </ul>
-
             </div>
-
 
             <!-- Main Content -->
             <div class="col-md-10 main-content p-0">
@@ -720,12 +702,11 @@
 
                 <!-- Page Content -->
                 <div class="page-content">
-                    <!-- Page Heading -->
                     <div class="page-heading">
                         <h1>داشبورد</h1>
                     </div>
 
-                    <!-- Stat Cards Row -->
+                    <!-- Stat Cards -->
                     <div class="row g-3 mb-4">
                         <div class="col-xl-3 col-md-6">
                             <div class="stat-card primary">
@@ -734,13 +715,10 @@
                                         <div class="stat-card-label">کل محصولات</div>
                                         <div class="stat-card-value">{{ $stats['total_products'] }}</div>
                                     </div>
-                                    <div class="stat-card-icon">
-                                        <i class="fas fa-box"></i>
-                                    </div>
+                                    <div class="stat-card-icon"><i class="fas fa-box"></i></div>
                                 </div>
                             </div>
                         </div>
-
                         <div class="col-xl-3 col-md-6">
                             <div class="stat-card success">
                                 <div class="stat-card-content">
@@ -748,13 +726,10 @@
                                         <div class="stat-card-label">محصولات تایید شده</div>
                                         <div class="stat-card-value">{{ $stats['approved_products'] }}</div>
                                     </div>
-                                    <div class="stat-card-icon">
-                                        <i class="fas fa-check-circle"></i>
-                                    </div>
+                                    <div class="stat-card-icon"><i class="fas fa-check-circle"></i></div>
                                 </div>
                             </div>
                         </div>
-
                         <div class="col-xl-3 col-md-6">
                             <div class="stat-card warning">
                                 <div class="stat-card-content">
@@ -762,13 +737,10 @@
                                         <div class="stat-card-label">در انتظار تایید</div>
                                         <div class="stat-card-value">{{ $stats['pending_products'] }}</div>
                                     </div>
-                                    <div class="stat-card-icon">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
+                                    <div class="stat-card-icon"><i class="fas fa-clock"></i></div>
                                 </div>
                             </div>
                         </div>
-
                         <div class="col-xl-3 col-md-6">
                             <div class="stat-card info">
                                 <div class="stat-card-content">
@@ -776,9 +748,7 @@
                                         <div class="stat-card-label">کل کاربران</div>
                                         <div class="stat-card-value">{{ $stats['total_users'] }}</div>
                                     </div>
-                                    <div class="stat-card-icon">
-                                        <i class="fas fa-users"></i>
-                                    </div>
+                                    <div class="stat-card-icon"><i class="fas fa-users"></i></div>
                                 </div>
                             </div>
                         </div>
@@ -796,25 +766,44 @@
                                     @if ($recentProducts->count() > 0)
                                         <div class="products-grid">
                                             @foreach ($recentProducts as $product)
+                                                @php
+                                                    $discountPercent = 0;
+                                                    if ($product->discount_price && $product->price > 0) {
+                                                        $discountPercent = round(
+                                                            (($product->price - $product->discount_price) /
+                                                                $product->price) *
+                                                                100,
+                                                        );
+                                                    }
+                                                    $stockStatus = $product->quantity > 0 ? 'in-stock' : 'out-of-stock';
+                                                    $stockText = $product->quantity > 0 ? 'موجود' : 'ناموجود';
+                                                @endphp
                                                 <div class="product-card">
                                                     <div class="product-image-wrapper">
-                                                        <img src="{{ asset('storage/' . $product->cover) }}"
-                                                            class="product-image" alt="{{ $product->title }}">
-                                                        @if ($product->discount > 0)
-                                                            <span
-                                                                class="product-badge">{{ $product->discount }}%</span>
+                                                        @if ($product->cover)
+                                                            <img src="{{ asset('storage/' . $product->cover) }}"
+                                                                class="product-image" alt="{{ $product->name }}">
+                                                        @else
+                                                            <div
+                                                                style="height:180px;background:var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);">
+                                                                <i class="fas fa-image"
+                                                                    style="font-size:40px;opacity:0.3;"></i>
+                                                            </div>
+                                                        @endif
+                                                        @if ($discountPercent > 0)
+                                                            <span class="product-badge">{{ $discountPercent }}%</span>
                                                         @endif
                                                     </div>
                                                     <div class="product-card-body">
-                                                        <h5 class="product-title">{{ $product->title }}</h5>
+                                                        <h5 class="product-title">{{ $product->name }}</h5>
                                                         <div class="product-price-section">
-                                                            @if ($product->discount > 0)
+                                                            @if ($discountPercent > 0)
                                                                 <span class="product-original-price">
                                                                     {{ number_format($product->price) }}
                                                                     <span class="price-unit">تومان</span>
                                                                 </span>
                                                                 <span class="product-price">
-                                                                    {{ number_format($product->final_price) }}
+                                                                    {{ number_format($product->discount_price) }}
                                                                     <span class="price-unit">تومان</span>
                                                                 </span>
                                                             @else
@@ -824,14 +813,13 @@
                                                                 </span>
                                                             @endif
                                                         </div>
-                                                        <span class="stock-status {{ $product->stock_status }}">
-                                                            {{ $product->stock_status_text }}
+                                                        <span class="stock-status {{ $stockStatus }}">
+                                                            {{ $stockText }}
                                                         </span>
                                                         <div class="product-actions">
                                                             <a href="{{ route('admin.products.edit', $product) }}"
                                                                 class="btn-action btn-warning-custom">
-                                                                <i class="fas fa-edit"></i>
-                                                                ویرایش
+                                                                <i class="fas fa-edit"></i> ویرایش
                                                             </a>
                                                             <form
                                                                 action="{{ route('admin.products.destroy', $product) }}"
@@ -841,8 +829,7 @@
                                                                 <button type="submit"
                                                                     class="btn-action btn-danger-custom"
                                                                     onclick="return confirm('آیا از حذف این محصول مطمئن هستید؟')">
-                                                                    <i class="fas fa-trash"></i>
-                                                                    حذف
+                                                                    <i class="fas fa-trash"></i> حذف
                                                                 </button>
                                                             </form>
                                                         </div>
@@ -874,13 +861,11 @@
                                                     class="article-item">
                                                     <div class="article-header">
                                                         <h6 class="article-title">{{ $article->title }}</h6>
-                                                        <span class="article-date">
-                                                            {{ $article->created_at->format('Y-m-d') }}
-                                                        </span>
+                                                        <span
+                                                            class="article-date">{{ $article->created_at->format('Y-m-d') }}</span>
                                                     </div>
                                                     <p class="article-excerpt">
-                                                        {{ Str::limit($article->content, 100) }}
-                                                    </p>
+                                                        {{ Str::limit($article->content, 100) }}</p>
                                                 </a>
                                             @endforeach
                                         </div>
