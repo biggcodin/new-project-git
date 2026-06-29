@@ -26,7 +26,7 @@ class ProductAttribute extends Model
     protected $casts = [
         'status' => 'boolean',
         'order' => 'integer',
-        'value' => 'array' // تبدیل خودکار JSON به آرایه
+        // 'value' => 'array' // ❌ حذف شد تا مقدار به‌صورت خام ذخیره شود
     ];
 
     // رابطه با محصول
@@ -38,27 +38,29 @@ class ProductAttribute extends Model
     // اکسسور برای نمایش مقدار به صورت مناسب
     public function getValueFormattedAttribute()
     {
-        if (is_array($this->value)) {
-            return implode(', ', $this->value);
-        }
-        
-        // اگر مقدار JSON است، آن را دیکود می‌کنیم
+        // اگر مقدار JSON است، آن را دیکود می‌کنیم (برای نمایش)
         $decoded = json_decode($this->value, true);
-        return is_array($decoded) ? implode(', ', $decoded) : $this->value;
+        if (is_array($decoded)) {
+            return implode(', ', $decoded);
+        }
+        return $this->value;
     }
 
     // اکسسور برای نمایش مقدار به صورت لیست
     public function getValueListAttribute()
     {
-        $value = is_array($this->value) ? $this->value : json_decode($this->value, true);
-        return is_array($value) ? $value : [$this->value];
+        $decoded = json_decode($this->value, true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+        return [$this->value];
     }
 
     // اکسسور برای بررسی اینکه آیا مقدار چندتایی است
     public function getIsMultipleAttribute()
     {
-        $value = is_array($this->value) ? $this->value : json_decode($this->value, true);
-        return is_array($value) && count($value) > 1;
+        $decoded = json_decode($this->value, true);
+        return is_array($decoded) && count($decoded) > 1;
     }
 
     // اسکوپ‌های کاربردی
@@ -89,7 +91,7 @@ class ProductAttribute extends Model
         
         if (!in_array($newValue, $values)) {
             $values[] = $newValue;
-            $this->value = $values;
+            $this->value = json_encode($values);
             $this->save();
         }
         
@@ -103,7 +105,7 @@ class ProductAttribute extends Model
         
         if (in_array($targetValue, $values)) {
             $values = array_diff($values, [$targetValue]);
-            $this->value = array_values($values);
+            $this->value = json_encode(array_values($values));
             $this->save();
         }
         

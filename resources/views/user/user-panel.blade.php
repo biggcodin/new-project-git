@@ -480,6 +480,16 @@
                 </div>
             @endif
 
+            <!--ثبت آگهی -->
+            @if (Auth::user()->seller_request_status !== 'none' || Auth::user()->isSeller())
+                <a href="{{ route('seller.product.create') }}" class="menu-card">
+                    <div class="menu-icon">
+                        <i class="fas fa-plus-circle"></i>
+                    </div>
+                    <div class="menu-title">ثبت آگهی جدید</div>
+                </a>
+            @endif
+
             <!-- My Ads -->
             <a href="{{ route('user.ads') }}" class="menu-card">
                 <div class="menu-icon">

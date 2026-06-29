@@ -25,7 +25,8 @@ class CustomFieldUpdateRequest extends FormRequest
             'label' => 'required|string|max:255', // عنوان نمایشی
             'type' => 'required|in:text,number,date,select', // نوع فیلد
             'options' => 'nullable|string', // گزینه‌ها برای select
-            'sub_subcategory_id' => 'nullable|exists:sub_subcategories,id'
+            'sub_subcategory_id' => 'nullable|exists:sub_subcategories,id',
+            'is_unique' => 'nullable|boolean',
         ];
     }
 }

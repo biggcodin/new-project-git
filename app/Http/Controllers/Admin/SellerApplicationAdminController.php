@@ -4,107 +4,329 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SellerApplication;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class SellerApplicationAdminController extends Controller
 {
     /**
-     * نمایش لیست درخواست‌های فروشندگی
+     * نمایش لیست یکپارچه کاربران + وضعیت هویتی + محصولات
+     * با قابلیت جستجو، فیلتر و مرتب‌سازی بر اساس آخرین درخواست
      */
-    public function index()
-{
-    $applications = SellerApplication::with(['user', 'subSubcategory'])
-        ->orderBy('created_at', 'desc')
-        ->paginate(15);
-
-    return view('admin.seller-applications.index', compact('applications'));
-}
-
-    /**
-     * نمایش جزئیات یک درخواست
-     */
-    public function show(SellerApplication $application)
+    public function index(Request $request)
     {
-        $application->load(['user', 'subSubcategory', 'admin']);
-        return view('admin.seller-applications.show', compact('application'));
+        $query = User::query();
+
+        // ========== فیلترها ==========
+        // جستجو در نام کاربر، نام‌کاربری و نام محصول
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                ->orWhere('username', 'like', "%{$search}%")
+                ->orWhereHas('products', function ($pq) use ($search) {
+                    $pq->where('name', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // فیلتر وضعیت هویت (بر اساس آخرین درخواست)
+        if ($identityStatus = $request->input('identity_status')) {
+            if ($identityStatus === 'none') {
+                // کاربرانی که هیچ درخواست هویتی ندارند
+                $query->whereDoesntHave('sellerApplications');
+            } else {
+                $query->whereHas('sellerApplications', function ($sq) use ($identityStatus) {
+                    $sq->where('status', $identityStatus);
+                });
+            }
+        }
+
+        // فیلتر وضعیت محصول (کاربرانی که حداقل یک محصول با این وضعیت دارند)
+        if ($productStatus = $request->input('product_status')) {
+            $query->whereHas('products', function ($pq) use ($productStatus) {
+                $pq->where('status', $productStatus);
+            });
+        }
+
+        // ========== مرتب‌سازی ==========
+        // مرتب‌سازی بر اساس جدیدترین درخواست هویت (زمان ایجاد آخرین seller_application)
+        $query->orderBy(
+            SellerApplication::select('created_at')
+                ->whereColumn('user_id', 'users.id')
+                ->latest()
+                ->limit(1),
+            'desc'
+        );
+
+        // ========== بارگذاری روابط ==========
+        $users = $query
+            ->with([
+                'sellerApplications' => function ($q) {
+                    $q->latest(); // آخرین درخواست هویت
+                },
+                'products' => function ($q) {
+                    $q->with([
+                        'category',
+                        'subcategory',
+                        'subSubcategory',
+                        'attributes',
+                        'media'
+                    ])->orderBy('created_at', 'desc');
+                }
+            ])
+            ->paginate(15)
+            ->appends($request->query()); // حفظ فیلترها در صفحه‌بندی
+
+        return view('admin.seller-applications.index', compact('users'));
     }
 
     /**
-     * تأیید درخواست فروشندگی
+     * نمایش جزئیات یک درخواست هویت (مودال یا صفحه)
      */
-    public function approve(Request $request, SellerApplication $application)
+    public function showIdentity(SellerApplication $application)
+    {
+        $application->load(['user', 'subSubcategory', 'admin']);
+        return view('admin.seller-applications.modals.identity-details', compact('application'));
+    }
+
+    /**
+     * نمایش جزئیات یک محصول (مودال یا صفحه)
+     */
+    public function showProduct(Product $product)
+    {
+        $product->load(['user', 'category', 'subcategory', 'subSubcategory', 'attributes', 'media', 'tags']);
+        return view('admin.seller-applications.modals.product-details', compact('product'));
+    }
+
+    // ================================================================
+    // 📌 مدیریت تأیید/رد هویت
+    // ================================================================
+
+    /**
+     * تأیید درخواست هویت
+     */
+    public function approveIdentity(Request $request, SellerApplication $application)
     {
         $request->validate([
             'admin_message' => 'nullable|string|max:500',
         ]);
 
-        // به‌روزرسانی وضعیت درخواست
-        $application->update([
-            'status' => 'approved',
-            'admin_message' => $request->admin_message ?? 'درخواست شما تأیید شد.',
-            'admin_id' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        // فقط درخواست‌های pending قابل تأیید هستند
+        if (!$application->isPending()) {
+            return back()->with('error', 'این درخواست قبلاً بررسی شده است.');
+        }
 
-        // تغییر نقش کاربر به فروشنده
-        $user = $application->user;
-        $user->role = 'seller';
-        $user->seller_request_status = 'approved';
-        $user->save();
+        DB::beginTransaction();
+        try {
+            // به‌روزرسانی درخواست
+            $application->update([
+                'status'        => 'approved',
+                'admin_message' => $request->admin_message ?? 'هویت شما تأیید شد.',
+                'admin_id'      => Auth::id(),
+                'reviewed_at'   => now(),
+                'rejection_reason' => null,
+            ]);
 
-        // ارسال پیام به کاربر (از طریق session)
-        session()->flash('seller_request_message', '✅ درخواست فروشندگی شما تأیید شد. نقش شما به فروشنده تغییر یافت.');
-        session()->flash('seller_request_status', 'approved');
+            // تغییر نقش کاربر به فروشنده
+            $user = $application->user;
+            $user->role = 'seller';
+            $user->seller_request_status = 'approved';
+            $user->identity_approved_at = now();
+            $user->save();
 
-        return redirect()->route('admin.seller.applications.index')
-            ->with('success', 'درخواست فروشندگی با موفقیت تأیید شد.');
+            DB::commit();
+
+            return redirect()->route('admin.seller.applications.index')
+                ->with('success', 'هویت کاربر با موفقیت تأیید شد. کاربر اکنون فروشنده است.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'خطا در تأیید هویت: ' . $e->getMessage());
+        }
     }
 
     /**
-     * رد درخواست فروشندگی
+     * رد درخواست هویت با ذخیره دلیل
      */
-    public function reject(Request $request, SellerApplication $application)
+    public function rejectIdentity(Request $request, SellerApplication $application)
     {
         $request->validate([
-            'admin_message' => 'required|string|max:500',
+            'rejection_reason' => 'required|string|max:500',
+            'admin_message'    => 'nullable|string|max:500',
         ]);
 
-        // به‌روزرسانی وضعیت درخواست
-        $application->update([
-            'status' => 'rejected',
-            'admin_message' => $request->admin_message,
-            'admin_id' => Auth::id(),
-            'reviewed_at' => now(),
+        if (!$application->isPending()) {
+            return back()->with('error', 'این درخواست قبلاً بررسی شده است.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $application->update([
+                'status'           => 'rejected',
+                'rejection_reason' => $request->rejection_reason,
+                'admin_message'    => $request->admin_message ?? 'اطلاعات هویتی شما رد شد.',
+                'admin_id'         => Auth::id(),
+                'reviewed_at'      => now(),
+            ]);
+
+            // به‌روزرسانی seller_request_status در user
+            $user = $application->user;
+            $user->seller_request_status = 'rejected';
+            $user->save();
+
+            DB::commit();
+
+            return redirect()->route('admin.seller.applications.index')
+                ->with('success', 'درخواست هویت با موفقیت رد شد. دلیل برای کاربر ارسال شد.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'خطا در رد هویت: ' . $e->getMessage());
+        }
+    }
+
+    // ================================================================
+    // 📌 مدیریت تأیید/رد محصولات (آگهی‌ها)
+    // ================================================================
+
+    /**
+     * تأیید محصول (آگهی) – فقط در صورتی که هویت کاربر تأیید شده باشد
+     */
+    public function approveProduct(Request $request, Product $product)
+    {
+        $request->validate([
+            'admin_message' => 'nullable|string|max:500',
         ]);
 
-        // به‌روزرسانی seller_request_status در جدول users
-        $user = $application->user;
-        $user->seller_request_status = 'rejected';
-        $user->save();
+        // فقط محصولات pending قابل تأیید هستند
+        if ($product->status !== 'pending') {
+            return back()->with('error', 'این محصول قبلاً بررسی شده است.');
+        }
 
-        // ارسال پیام به کاربر (از طریق session)
-        session()->flash('seller_request_message', '❌ درخواست فروشندگی شما رد شد. دلیل: ' . $request->admin_message);
-        session()->flash('seller_request_status', 'rejected');
+        // بررسی وضعیت هویت کاربر
+        $user = $product->user;
+        $latestIdentity = $user->sellerApplications()->latest()->first();
 
-        return redirect()->route('admin.seller.applications.index')
-            ->with('success', 'درخواست فروشندگی با موفقیت رد شد.');
+        // اگر هویت کاربر رد شده باشد یا اصلاً درخواست هویتی نداشته باشد، اجازه تأیید محصول داده نشود
+        if (!$latestIdentity || $latestIdentity->status === 'rejected') {
+            return back()->with('error', 'امکان تأیید آگهی وجود ندارد زیرا هویت کاربر تأیید نشده است.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $product->update([
+                'status'           => 'approved',
+                'published_at'     => now(),
+                'rejection_reason' => null,
+            ]);
+
+            // در صورت نیاز، پیام ادمین را در متا ذخیره کن
+            if ($request->filled('admin_message')) {
+                $meta = $this->safeMeta($product->meta);
+                $meta['admin_message'] = $request->admin_message;
+                $product->update(['meta' => $meta]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('admin.seller.applications.index')
+                ->with('success', 'آگهی با موفقیت تأیید شد و منتشر گردید.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'خطا در تأیید آگهی: ' . $e->getMessage());
+        }
     }
 
     /**
-     * حذف درخواست (اختیاری)
+     * رد محصول (آگهی) با ذخیره دلیل
      */
-    public function destroy(SellerApplication $application)
+    public function rejectProduct(Request $request, Product $product)
     {
-        // فقط درخواست‌های pending را می‌توان حذف کرد
-        if ($application->status !== 'pending') {
+        $request->validate([
+            'rejection_reason' => 'required|string|max:500',
+            'admin_message'    => 'nullable|string|max:500',
+        ]);
+
+        if ($product->status !== 'pending') {
+            return back()->with('error', 'این محصول قبلاً بررسی شده است.');
+        }
+
+        DB::beginTransaction();
+        try {
+            $product->update([
+                'status'           => 'rejected',
+                'rejection_reason' => $request->rejection_reason,
+                'published_at'     => null,
+            ]);
+
+            // ذخیره پیام ادمین در متا
+            $meta = $this->safeMeta($product->meta);
+            $meta['admin_message'] = $request->admin_message ?? 'آگهی شما رد شد.';
+            $product->update(['meta' => $meta]);
+
+            DB::commit();
+
+            return redirect()->route('admin.seller.applications.index')
+                ->with('success', 'آگهی با موفقیت رد شد. دلیل برای کاربر ارسال شد.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'خطا در رد آگهی: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * حذف درخواست هویت (فقط در حالت pending)
+     */
+    public function destroyIdentity(SellerApplication $application)
+    {
+        if (!$application->isPending()) {
             return back()->with('error', 'فقط درخواست‌های در انتظار بررسی قابل حذف هستند.');
         }
 
         $application->delete();
 
         return redirect()->route('admin.seller.applications.index')
-            ->with('success', 'درخواست با موفقیت حذف شد.');
+            ->with('success', 'درخواست هویت با موفقیت حذف شد.');
+    }
+
+    /**
+     * حذف محصول (آگهی) - فقط در حالت pending یا rejected
+     */
+    public function destroyProduct(Product $product)
+    {
+        if (!in_array($product->status, ['pending', 'rejected'])) {
+            return back()->with('error', 'فقط آگهی‌های در انتظار یا رد شده قابل حذف هستند.');
+        }
+
+        // حذف فایل‌های مرتبط (اختیاری)
+        // ...
+
+        $product->delete();
+
+        return redirect()->route('admin.seller.applications.index')
+            ->with('success', 'آگهی با موفقیت حذف شد.');
+    }
+
+    /**
+     * تبدیل ایمن meta به آرایه
+     *
+     * @param mixed $meta
+     * @return array
+     */
+    private function safeMeta($meta): array
+    {
+        if (is_array($meta)) {
+            return $meta;
+        }
+        if (is_string($meta)) {
+            $decoded = json_decode($meta, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
     }
 }

@@ -25,7 +25,8 @@ class User extends Model implements Authenticatable
         'remember_token',
         'balance',
         'status',
-        'seller_request_status'
+        'seller_request_status',
+        'identity_approved_at',
     ];
 
     protected $hidden = [
@@ -40,18 +41,23 @@ class User extends Model implements Authenticatable
         'status' => 'string',
         'seller_request_status' => 'string',
         'balance' => 'decimal:0',
+        'identity_approved_at' => 'datetime',
     ];
 
     // ============== متد جدید برای دریافت نقش‌ها از دیتابیس ==============
     public static function getRoleOptions(): array
     {
-        $type = DB::select("SHOW COLUMNS FROM users WHERE Field = 'role'")[0]->Type ?? '';
-        preg_match('/^enum\((.*)\)$/', $type, $matches);
-        if (empty($matches)) {
+        try {
+            $type = DB::select("SHOW COLUMNS FROM users WHERE Field = 'role'")[0]->Type ?? '';
+            preg_match('/^enum\((.*)\)$/', $type, $matches);
+            if (empty($matches)) {
+                return ['super_admin', 'admin', 'seller', 'buyer', 'user'];
+            }
+            $values = str_getcsv($matches[1], ',', "'");
+            return array_map(fn($v) => trim($v, "'"), $values);
+        } catch (\Exception $e) {
             return ['super_admin', 'admin', 'seller', 'buyer', 'user'];
         }
-        $values = str_getcsv($matches[1], ',', "'");
-        return array_map(fn($v) => trim($v, "'"), $values);
     }
 
     // ============== متدهای بررسی نقش ==============
@@ -103,6 +109,7 @@ class User extends Model implements Authenticatable
     {
         $this->role = 'seller';
         $this->seller_request_status = 'approved';
+        $this->identity_approved_at = now();
         $this->save();
     }
 
@@ -130,11 +137,28 @@ class User extends Model implements Authenticatable
      */
     public function canRequestSeller(): bool
     {
-        // اگر نقش فروشنده دارد یا درخواست pending دارد، نمی‌تواند درخواست دهد
         if ($this->isSeller() || $this->hasSellerRequest()) {
             return false;
         }
         return true;
+    }
+
+    // ============== وضعیت هویت ==============
+
+    /**
+     * بررسی اینکه آیا کاربر هویت تأیید شده دارد
+     */
+    public function hasApprovedIdentity(): bool
+    {
+        return $this->isSeller() || $this->seller_request_status === 'approved' || !is_null($this->identity_approved_at);
+    }
+
+    /**
+     * بررسی اینکه کاربر حداقل یک درخواست هویت با وضعیت pending یا approved دارد
+     */
+    public function hasPendingOrApprovedIdentity(): bool
+    {
+        return $this->sellerApplications()->whereIn('status', ['pending', 'approved'])->exists();
     }
 
     // ============== روابط ==============
@@ -149,20 +173,18 @@ class User extends Model implements Authenticatable
         return $this->hasMany(Article::class);
     }
 
-    // ============== روابط با seller applications ==============
+    public function sellerApplications()
+    {
+        return $this->hasMany(SellerApplication::class);
+    }
 
-public function sellerApplications()
-{
-    return $this->hasMany(SellerApplication::class);
-}
+    public function latestSellerApplication()
+    {
+        return $this->hasOne(SellerApplication::class)->latestOfMany();
+    }
 
-public function latestSellerApplication()
-{
-    return $this->hasOne(SellerApplication::class)->latestOfMany();
-}
-
-public function hasPendingSellerApplication(): bool
-{
-    return $this->sellerApplications()->where('status', 'pending')->exists();
-}
+    public function hasPendingSellerApplication(): bool
+    {
+        return $this->sellerApplications()->where('status', 'pending')->exists();
+    }
 }

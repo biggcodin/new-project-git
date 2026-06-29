@@ -31,17 +31,16 @@ class CustomFieldController extends Controller
      */
     public function store(CustomFieldStoreRequest $request)
     {
-        // آماده‌سازی گزینه‌ها برای فیلدهای select
-        $options = $this->prepareOptions($request->type, $request->options);
+        // دریافت داده‌های اعتبارسنجی‌شده
+        $data = $request->validated();
 
-        CustomField::create([
-            'key' => $request->key,
-            'label' => $request->label,
-            'type' => $request->type,
-            'options' => $options,
-            'subcategory_id' => $request->subcategory_id,
-            'sub_subcategory_id' => $request->sub_subcategory_id,
-        ]);
+        // مقداردهی is_unique (چک‌باکس)
+        $data['is_unique'] = $request->has('is_unique') ? 1 : 0;
+
+        // آماده‌سازی گزینه‌ها برای فیلدهای select
+        $data['options'] = $this->prepareOptions($request->type, $request->options);
+
+        CustomField::create($data);
 
         return redirect()->back()->with('success', 'فیلد با موفقیت اضافه شد.');
     }
@@ -60,16 +59,16 @@ class CustomFieldController extends Controller
      */
     public function update(CustomFieldUpdateRequest $request, CustomField $customField)
     {
-        $options = $this->prepareOptions($request->type, $request->options);
+        // دریافت داده‌های اعتبارسنجی‌شده
+        $data = $request->validated();
 
-        $customField->update([
-            'key' => $request->key,
-            'label' => $request->label,
-            'type' => $request->type,
-            'options' => $options,
-            'subcategory_id' => $request->subcategory_id,
-            'sub_subcategory_id' => $request->sub_subcategory_id,
-        ]);
+        // مقداردهی is_unique (چک‌باکس)
+        $data['is_unique'] = $request->has('is_unique') ? 1 : 0;
+
+        // آماده‌سازی گزینه‌ها برای فیلدهای select
+        $data['options'] = $this->prepareOptions($request->type, $request->options);
+
+        $customField->update($data);
 
         return redirect()->back()->with('success', 'فیلد با موفقیت ویرایش شد.');
     }

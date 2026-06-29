@@ -2,73 +2,79 @@
 
 namespace App\Http\Controllers;
 
-
 use App\Http\Requests\WalletChargeRequest;
+use App\Models\Product;
+use App\Models\ProductMedia;
+use App\Models\SellerApplication;
+use App\Models\SubSubcategory;
 use App\Models\WalletTransaction;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use App\Models\Order;
+use App\Models\Tag;
+use App\Models\CustomField;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+
 class UserController extends Controller
 {
-    // نمایش صفحه شارژ کیف پول
-    public function walletCharge()
-{
-    return view('user.wallet-charge');
-}
-
-
     /**
- * نمایش تاریخچه تراکنش‌های کیف پول
- */
-public function walletHistory(Request $request)
-{
-    // کوئری پایه: فقط تراکنش‌های کاربر جاری
-    $query = WalletTransaction::where('user_id', auth()->id());
-
-    // فیلتر بر اساس نوع تراکنش
-    if ($request->filled('type')) {
-        $query->where('type', $request->type);
+     * پاک‌سازی قیمت و تبدیل به عدد صحیح
+     */
+    private function cleanPrice($price): int
+    {
+        $clean = preg_replace('/[^0-9.]/', '', (string) $price);
+        return (int) round((float) $clean);
     }
 
-    // فیلتر بر اساس وضعیت
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
+    public function walletCharge()
+    {
+        return view('user.wallet-charge');
     }
 
-    // مرتب‌سازی نزولی بر اساس جدیدترین
-    $transactions = $query->orderByDesc('id')->paginate(15);
+    public function walletHistory(Request $request)
+    {
+        $query = WalletTransaction::where('user_id', auth()->id());
 
-    // موجودی فعلی کاربر
-    $balance = auth()->user()->balance ?? 0;
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
 
-    // لیست انواع و وضعیت‌ها برای فیلتر dropdown
-    $types = [
-        'deposit'  => 'شارژ',
-        'withdraw' => 'برداشت',
-        'purchase' => 'خرید',
-        'refund'   => 'بازگشت وجه',
-        'bonus'    => 'پاداش',
-    ];
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
 
-    $statuses = [
-        'pending'   => 'در انتظار',
-        'completed' => 'تکمیل شده',
-        'failed'    => 'ناموفق',
-        'canceled'  => 'لغو شده',
-    ];
+        $transactions = $query->orderByDesc('id')->paginate(15);
+        $balance = auth()->user()->balance ?? 0;
 
-    return view('user.wallet-history', compact('transactions', 'balance', 'types', 'statuses'));
-}
+        $types = [
+            'deposit'  => 'شارژ',
+            'withdraw' => 'برداشت',
+            'purchase' => 'خرید',
+            'refund'   => 'بازگشت وجه',
+            'bonus'    => 'پاداش',
+        ];
+
+        $statuses = [
+            'pending'   => 'در انتظار',
+            'completed' => 'تکمیل شده',
+            'failed'    => 'ناموفق',
+            'canceled'  => 'لغو شده',
+        ];
+
+        return view('user.wallet-history', compact('transactions', 'balance', 'types', 'statuses'));
+    }
+
     public function charge(WalletChargeRequest $request)
     {
-        // حالا نیازی به validate() در اینجا نیست، چون اعتبارسنجی قبلاً انجام شده
         $amount = (int) $request->input('amount');
         $user = auth()->user();
 
         DB::beginTransaction();
 
         try {
-            // ثبت تراکنش با وضعیت pending
             $transaction = WalletTransaction::createTransaction(
                 user: $user,
                 amount: $amount,
@@ -83,7 +89,6 @@ public function walletHistory(Request $request)
 
             DB::commit();
 
-            // شبیه‌سازی درگاه پرداخت (در آینده کد واقعی جایگزین می‌شود)
             $this->mockPaymentGateway($transaction);
 
             return redirect()
@@ -98,77 +103,323 @@ public function walletHistory(Request $request)
         }
     }
 
-    /**
-     * شبیه‌سازی درگاه پرداخت (موقت)
-     */
     private function mockPaymentGateway(WalletTransaction $transaction): void
     {
-        // در آینده اینجا کد واقعی درگاه می‌آید
         $transaction->complete();
     }
 
+    public function purchases(Request $request)
+    {
+        $query = Order::where('user_id', auth()->id());
 
-/**
- * نمایش خریدهای کاربر
- */
-public function purchases(Request $request)
-{
-    $query = Order::where('user_id', auth()->id());
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
 
-    // فیلتر بر اساس وضعیت
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
+        $purchases = $query->orderByDesc('id')->paginate(10);
+
+        $statuses = [
+            'pending'    => 'در انتظار پرداخت',
+            'paid'       => 'پرداخت شده',
+            'processing' => 'در حال پردازش',
+            'completed'  => 'تکمیل شده',
+            'canceled'   => 'لغو شده',
+            'failed'     => 'ناموفق',
+        ];
+
+        return view('user.purchases', compact('purchases', 'statuses'));
     }
 
-    // مرتب‌سازی نزولی
-    $purchases = $query->orderByDesc('id')->paginate(10);
+    public function orderDetails(Order $order)
+    {
+        if ($order->user_id !== auth()->id()) {
+            abort(403, 'دسترسی غیرمجاز');
+        }
 
-    // لیست وضعیت‌ها برای فیلتر
-    $statuses = [
-        'pending'    => 'در انتظار پرداخت',
-        'paid'       => 'پرداخت شده',
-        'processing' => 'در حال پردازش',
-        'completed'  => 'تکمیل شده',
-        'canceled'   => 'لغو شده',
-        'failed'     => 'ناموفق',
-    ];
-
-    return view('user.purchases', compact('purchases', 'statuses'));
-}
-
-public function orderDetails(Order $order)
-{
-    // اطمینان از اینکه سفارش متعلق به کاربر جاری است
-    if ($order->user_id !== auth()->id()) {
-        abort(403, 'دسترسی غیرمجاز');
+        $order->load('items.product');
+        return view('user.order-details', compact('order'));
     }
-    
-    $order->load('items.product');
-    return view('user.order-details', compact('order'));
-}
 
-    // نمایش آگهی‌های من
+    // ======================== بخش آگهی‌های من ========================
+
     public function ads()
     {
-        return view('user.ads');
+        $products = Product::where('user_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->paginate(10);
+
+        return view('user.ads', compact('products'));
     }
 
-    // نمایش صفحه چت و پیام‌ها
+    public function editProductApplication(Product $product)
+    {
+        if ($product->user_id !== auth()->id()) {
+            abort(403, 'دسترسی غیرمجاز');
+        }
+
+        if ($product->status !== 'rejected') {
+            return redirect()->route('user.ads')
+                ->with('error', 'فقط آگهی‌های ردشده قابل ویرایش هستند.');
+        }
+
+        $gameTypes = SubSubcategory::whereHas('subcategory', function ($q) {
+            $q->where('name', 'اکانت')->whereHas('category', function ($qq) {
+                $qq->where('name', 'بازی');
+            });
+        })->get();
+
+        $tags = Tag::orderBy('name')->get();
+
+        return view('user.edit-ad', compact('product', 'gameTypes', 'tags'));
+    }
+
+    public function updateProductApplication(Request $request, Product $product)
+    {
+        if ($product->user_id !== auth()->id()) {
+            abort(403, 'دسترسی غیرمجاز');
+        }
+
+        if ($product->status !== 'rejected') {
+            return redirect()->route('user.ads')
+                ->with('error', 'فقط آگهی‌های ردشده قابل ویرایش هستند.');
+        }
+
+        if ($request->has('tags')) {
+            $tags = json_decode($request->tags, true);
+            $request->merge(['tags' => is_array($tags) ? $tags : []]);
+        }
+
+        $validated = $request->validate([
+            'sub_subcategory_id' => 'required|exists:sub_subcategories,id',
+            'name'               => 'required|string|max:255',
+            'price'              => 'required|numeric|min:0',
+            'description'        => 'nullable|string',
+            'cover'              => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'media.*'            => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov,avi,mkv|max:20480',
+            'tags'               => 'nullable|array',
+            'tags.*'             => 'integer|exists:tags,id',
+            'attributes'         => 'nullable|array',
+            'remove_cover'       => 'nullable|boolean',
+        ]);
+
+        $subSub = SubSubcategory::with('subcategory.category')->findOrFail($request->sub_subcategory_id);
+
+        // ========== بررسی فیلد یکتا هنگام ویرایش ==========
+        $uniqueKey = CustomField::getUniqueFieldKeyForSubSubcategory($request->sub_subcategory_id);
+        if ($uniqueKey) {
+            $uniqueValue = $request->input('attributes.' . $uniqueKey);
+            if ($uniqueValue) {
+                $exists = Product::where('sub_subcategory_id', $request->sub_subcategory_id)
+                    ->whereHas('attributes', function ($q) use ($uniqueKey, $uniqueValue) {
+                        $q->where('key', $uniqueKey)->where('value', (string)$uniqueValue);
+                    })
+                    ->where('id', '!=', $product->id)
+                    ->whereIn('status', ['pending', 'approved'])
+                    ->exists();
+
+                if ($exists) {
+                    return back()->withInput()->with('error', 'این مقدار برای فیلد یکتا (' . $uniqueKey . ') قبلاً برای این نوع بازی ثبت شده است.');
+                }
+            }
+        }
+
+        DB::beginTransaction();
+
+        try {
+            $product->sub_subcategory_id = $request->sub_subcategory_id;
+            $product->category_id = $subSub->subcategory->category->id;
+            $product->subcategory_id = $subSub->subcategory->id;
+            $product->name = $request->name;
+            $product->price = $this->cleanPrice($request->price);
+            $product->description = $request->description;
+
+            if ($request->boolean('remove_cover')) {
+                if ($product->cover) {
+                    Storage::disk('public')->delete($product->cover);
+                    $product->cover = null;
+                }
+            }
+
+            if ($request->hasFile('cover')) {
+                if ($product->cover) {
+                    Storage::disk('public')->delete($product->cover);
+                }
+                $coverPath = $request->file('cover')->store('products', 'public');
+                $product->cover = $coverPath;
+            }
+
+            $product->save();
+
+            if ($request->hasFile('media')) {
+                foreach ($request->file('media') as $file) {
+                    $path = $file->store('products_media', 'public');
+                    $product->media()->create([
+                        'file_path' => $path,
+                        'file_type' => $file->getClientMimeType(),
+                        'file_name' => $file->getClientOriginalName(),
+                        'file_size' => $file->getSize(),
+                    ]);
+                }
+            }
+
+            if ($request->has('tags')) {
+                $product->tags()->sync($request->tags);
+            }
+
+            $product->attributes()->delete();
+            $attributes = $request->input('attributes', []);
+            foreach ($attributes as $key => $value) {
+                if (!empty($value)) {
+                    $product->attributes()->create([
+                        'key'   => $key,
+                        'value' => is_array($value) ? json_encode($value) : (string)$value,
+                    ]);
+                }
+            }
+
+            $product->status = 'pending';
+            $product->rejection_reason = null;
+
+            $meta = $this->safeMeta($product->meta);
+            unset($meta['admin_message']);
+            $product->meta = $meta;
+
+            $product->save();
+
+            DB::commit();
+
+            return redirect()->route('user.ads')
+                ->with('success', 'آگهی شما با موفقیت ویرایش و دوباره برای بررسی ارسال شد.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'خطا در ویرایش آگهی: ' . $e->getMessage());
+        }
+    }
+
+    public function destroyMedia($id)
+    {
+        $media = ProductMedia::findOrFail($id);
+
+        if ($media->product->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'دسترسی غیرمجاز'], 403);
+        }
+
+        Storage::disk('public')->delete($media->file_path);
+        $media->delete();
+
+        return response()->json(['success' => true]);
+    }
+
+    // ======================== بخش ویرایش اطلاعات هویتی ========================
+
+    public function editIdentity()
+    {
+        $user = auth()->user();
+
+        $identity = SellerApplication::where('user_id', $user->id)
+            ->where('status', 'rejected')
+            ->latest()
+            ->first();
+
+        if (!$identity) {
+            return redirect()->route('user.panel')
+                ->with('error', 'شما هیچ درخواست هویت رد شده‌ای ندارید.');
+        }
+
+        return view('user.identity-edit', compact('identity'));
+    }
+
+    public function updateIdentity(Request $request)
+    {
+        $user = auth()->user();
+
+        $identity = SellerApplication::where('user_id', $user->id)
+            ->where('status', 'rejected')
+            ->latest()
+            ->first();
+
+        if (!$identity) {
+            return redirect()->route('user.panel')
+                ->with('error', 'درخواست هویت رد شده‌ای یافت نشد.');
+        }
+
+        $validated = $request->validate([
+            'is_adult'       => 'required|in:yes,no',
+            'first_name'     => 'required|string|max:100',
+            'last_name'      => 'required|string|max:100',
+            'national_code'  => [
+                'required',
+                'string',
+                'size:10',
+                Rule::unique('seller_applications', 'national_code')
+                    ->where(function ($query) {
+                        return $query->whereIn('status', ['pending', 'approved']);
+                    })
+                    ->ignore($identity->id),
+            ],
+            'phone'          => 'required|string|max:20',
+            'birth_date'     => 'nullable|string|max:20',
+            'card_number'    => 'required|string|max:20',
+            'id_card_image'  => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $imagePath = $identity->national_card_image;
+        if ($request->hasFile('id_card_image')) {
+            if ($imagePath) {
+                Storage::disk('public')->delete($imagePath);
+            }
+            $imagePath = $request->file('id_card_image')->store('seller_documents/national_cards', 'public');
+        }
+
+        $identity->update([
+            'is_over_18'           => $request->is_adult === 'yes',
+            'first_name'           => $request->first_name,
+            'last_name'            => $request->last_name,
+            'national_code'        => $request->national_code,
+            'phone'                => $request->phone,
+            'birth_date'           => $request->birth_date,
+            'bank_card_number'     => $request->card_number,
+            'national_card_image'  => $imagePath,
+            'status'               => 'pending',
+            'rejection_reason'     => null,
+            'admin_message'        => null,
+            'admin_id'             => null,
+            'reviewed_at'          => null,
+        ]);
+
+        $user->update(['seller_request_status' => 'pending']);
+
+        return redirect()->route('user.ads')
+            ->with('success', 'اطلاعات هویتی شما با موفقیت ویرایش و مجدداً برای بررسی ارسال شد.');
+    }
+
+    // ======================== سایر متدها ========================
+
     public function chat()
     {
         return view('user.chat');
     }
 
-    // نمایش فرم ویرایش پروفایل
     public function profileEdit()
     {
         return view('user.profile-edit');
     }
 
-    // به‌روزرسانی پروفایل
     public function profileUpdate(Request $request)
     {
-        // بعداً تکمیل می‌شود
         return back()->with('success', 'پروفایل با موفقیت به‌روزرسانی شد.');
+    }
+
+    private function safeMeta($meta): array
+    {
+        if (is_array($meta)) {
+            return $meta;
+        }
+        if (is_string($meta)) {
+            $decoded = json_decode($meta, true);
+            return is_array($decoded) ? $decoded : [];
+        }
+        return [];
     }
 }

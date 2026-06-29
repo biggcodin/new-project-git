@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 
 <head>
     <meta charset="UTF-8">
@@ -47,11 +47,15 @@
             padding: 40px 20px;
         }
 
-        /* Header */
         .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .page-header h2 {
@@ -62,7 +66,12 @@
             letter-spacing: -0.02em;
         }
 
-        /* Alert */
+        .btn-group-wrapper {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         .alert {
             padding: 15px 20px;
             border-radius: 10px;
@@ -76,7 +85,6 @@
             border-color: rgba(16, 185, 129, 0.3);
         }
 
-        /* Buttons */
         .btn-custom {
             padding: 10px 20px;
             border-radius: 10px;
@@ -90,6 +98,7 @@
             align-items: center;
             gap: 8px;
             text-decoration: none;
+            white-space: nowrap;
         }
 
         .btn-success-custom {
@@ -137,12 +146,22 @@
             box-shadow: 0 6px 20px -3px rgba(167, 139, 250, 0.6);
         }
 
+        .btn-secondary-custom {
+            background: linear-gradient(180deg, #101827, #0b1220);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary-custom:hover {
+            transform: translateY(-2px);
+            border-color: var(--muted);
+        }
+
         .btn-sm {
             padding: 6px 12px;
             font-size: 12px;
         }
 
-        /* Table */
         .table-wrapper {
             background: var(--card);
             border: 1px solid var(--border);
@@ -178,6 +197,7 @@
             border-bottom: 1px solid var(--border);
             color: var(--text);
             vertical-align: middle;
+            text-align: right;
         }
 
         tbody tr:last-child td {
@@ -188,7 +208,6 @@
             background: rgba(167, 139, 250, 0.05);
         }
 
-        /* Status Badge */
         .status-badge {
             display: inline-flex;
             align-items: center;
@@ -213,14 +232,27 @@
             background: var(--success);
         }
 
-        /* Action Buttons in Table */
+        .status-unique {
+            background: rgba(34, 211, 238, 0.12);
+            color: #cffafe;
+            border: 1px solid rgba(34, 211, 238, 0.35);
+        }
+
+        .status-unique::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
         .action-buttons {
             display: flex;
             gap: 5px;
             flex-wrap: wrap;
+            justify-content: flex-start;
         }
 
-        /* Pagination */
         .pagination-wrapper {
             display: flex;
             justify-content: center;
@@ -251,12 +283,6 @@
             border-color: rgba(34, 211, 238, 0.35);
         }
 
-        .pagination-wrapper .disabled .page-link {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* Modal Styles */
         .modal-content {
             background: var(--card);
             border: 1px solid var(--border);
@@ -290,7 +316,6 @@
             filter: invert(1) grayscale(100%) brightness(200%);
         }
 
-        /* Form Controls in Modal */
         .form-label {
             color: var(--muted);
             font-size: 13px;
@@ -325,7 +350,28 @@
             color: var(--text);
         }
 
-        /* Responsive */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-2);
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            color: var(--text);
+            font-size: 13px;
+            font-weight: 500;
+            margin: 0;
+            cursor: pointer;
+        }
+
         @media (max-width: 768px) {
             .page-header {
                 flex-direction: column;
@@ -341,9 +387,17 @@
                 width: 100%;
                 justify-content: center;
             }
+
+            .btn-group-wrapper {
+                width: 100%;
+            }
+
+            .btn-group-wrapper .btn-custom {
+                flex: 1;
+                justify-content: center;
+            }
         }
 
-        /* Scrollbar Styling */
         ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
@@ -368,23 +422,19 @@
     <div class="container">
         <div class="page-header">
             <h2>مدیریت فیلد‌های اختصاصی</h2>
+            <div class="btn-group-wrapper">
+                <a href="#addFieldModal" data-bs-toggle="modal" class="btn-custom btn-success-custom">
+                    <i class="fas fa-plus"></i> افزودن فیلد
+                </a>
+                <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+                    <i class="fas fa-tachometer-alt"></i> بازگشت به داشبورد
+                </a>
+            </div>
         </div>
 
         @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif
-
-        <!-- دکمه افزودن -->
-        <div style="margin-bottom: 30px;">
-            <a href="#addFieldModal" data-bs-toggle="modal" class="btn-custom btn-success-custom">
-                <i class="fas fa-plus"></i>
-                افزودن فیلد
-            </a>
-            <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
-                <i class="fas fa-tachometer-alt"></i>
-                بازگشت به داشبورد
-            </a>
-        </div>
 
         <!-- جدول لیست فیلد‌ها -->
         <div class="table-wrapper">
@@ -425,14 +475,16 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <span class="status-badge status-active">فعال</span>
+                                    <span
+                                        class="status-badge {{ $field->is_unique ? 'status-unique' : 'status-active' }}">
+                                        {{ $field->is_unique ? '🔑 یکتا' : 'فعال' }}
+                                    </span>
                                 </td>
                                 <td>
                                     <div class="action-buttons">
                                         <button class="btn-custom btn-warning-custom btn-sm"
                                             onclick="openEditModal({{ $field->id }})">
-                                            <i class="fas fa-edit"></i>
-                                            ویرایش
+                                            <i class="fas fa-edit"></i> ویرایش
                                         </button>
                                         <form action="{{ route('admin.custom-fields.destroy', $field->id) }}"
                                             method="POST" class="d-inline">
@@ -440,8 +492,7 @@
                                             @method('DELETE')
                                             <button type="submit" class="btn-custom btn-danger-custom btn-sm"
                                                 onclick="return confirm('آیا از حذف این فیلد اطمینان دارید؟')">
-                                                <i class="fas fa-trash"></i>
-                                                حذف
+                                                <i class="fas fa-trash"></i> حذف
                                             </button>
                                         </form>
                                     </div>
@@ -458,7 +509,9 @@
             {{ $customFields->links() }}
         </div>
 
+        <!-- ================================ -->
         <!-- Modal افزودن فیلد -->
+        <!-- ================================ -->
         <div class="modal fade" id="addFieldModal" tabindex="-1">
             <div class="modal-dialog">
                 <form method="POST" action="{{ route('admin.custom-fields.store') }}">
@@ -512,6 +565,18 @@
                                 <input type="text" name="options" class="form-control"
                                     placeholder="Gold V, Platinum III, Legend">
                             </div>
+
+                            <!-- چک‌باکس is_unique -->
+                            <div class="mb-3">
+                                <div class="checkbox-group">
+                                    <input type="checkbox" name="is_unique" id="add_is_unique" value="1">
+                                    <label for="add_is_unique">این فیلد به عنوان شناسه یکتا برای تشخیص تکراری‌بودن
+                                        اکانت استفاده شود</label>
+                                </div>
+                                <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 5px;">
+                                    اگر فعال باشد، سیستم از ثبت اکانت با مقدار تکراری برای این فیلد جلوگیری می‌کند.
+                                </small>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn-custom btn-success-custom">ثبت فیلد</button>
@@ -521,7 +586,9 @@
             </div>
         </div>
 
+        <!-- ================================ -->
         <!-- Modal ویرایش فیلد -->
+        <!-- ================================ -->
         <div class="modal fade" id="editFieldModal" tabindex="-1">
             <div class="modal-dialog">
                 <form id="editFieldForm" method="POST">
@@ -533,7 +600,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                         </div>
                         <div class="modal-body" id="editFieldBody">
-                            <!-- فیلد‌ها با Ajax پر میشن -->
+                            <!-- فیلد‌ها با Ajax پر می‌شوند -->
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn-custom btn-primary-custom">ذخیره</button>
@@ -547,9 +614,10 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 🔧 تابع loadDynamicFields برای فرم افزودن
+        // ===== توابع موجود =====
+
         function loadDynamicFields() {
-            const subcategoryId = document.getElementById('addSubcategorySelect').value;
+            const subcategoryId = document.getElementById('addSubcategorySelect')?.value;
             const subSubcategoryId = document.getElementById('addSubSubcategorySelect')?.value;
             const container = document.getElementById('custom-fields');
             if (!container) return;
@@ -564,12 +632,12 @@
                         <div class="mb-3">
                             <label class="form-label">${field.label}</label>
                             ${field.type === 'select' ? `
-                                                <select name="attributes[${key}]" class="form-control">
-                                                    ${field.options.map(opt => `<option>${opt}</option>`).join('')}
-                                                </select>
-                                            ` : `
-                                                <input type="${field.type}" name="attributes[${key}]" class="form-control" value="">
-                                            `}
+                                                                                <select name="attributes[${key}]" class="form-control">
+                                                                                    ${field.options.map(opt => `<option>${opt}</option>`).join('')}
+                                                                                </select>
+                                                                            ` : `
+                                                                                <input type="${field.type}" name="attributes[${key}]" class="form-control" value="">
+                                                                            `}
                         </div>`;
                     }
                 })
@@ -578,7 +646,6 @@
                 });
         }
 
-        // ✅ مهم: اطمینان از فراخوانی صحیح
         document.getElementById('addSubcategorySelect')?.addEventListener('change', function() {
             toggleSubSubcategory(this);
             loadDynamicFields();
@@ -588,7 +655,7 @@
             loadDynamicFields();
         });
 
-        // 🔧 باز کردن Modal ویرایش با Ajax
+        // ===== باز کردن Modal ویرایش با Ajax (با چک‌باکس is_unique) =====
         function openEditModal(fieldId) {
             fetch(`/admin/custom-fields/${fieldId}/edit`)
                 .then(res => res.json())
@@ -597,6 +664,8 @@
                     const form = document.getElementById('editFieldForm');
                     form.setAttribute('action', `/admin/custom-fields/${field.id}`);
                     const body = document.getElementById('editFieldBody');
+
+                    // ساختار HTML با چک‌باکس is_unique
                     body.innerHTML = `
                     <input type="hidden" name="id" value="${field.id}">
                     <div class="mb-3">
@@ -604,7 +673,7 @@
                         <select name="subcategory_id" id="editSubcategorySelect" class="form-select"
                                 onchange="loadSubSubcategoryInEdit(this)">
                             @foreach ($subcategories as $sub)
-                                <option value="{{ $sub->id }}" data-category="{{ $sub->category_id }}">
+                                <option value="{{ $sub->id }}" ${field.subcategory_id == {{ $sub->id }} ? 'selected' : ''}>
                                     {{ $sub->name }}
                                 </option>
                             @endforeach
@@ -615,7 +684,8 @@
                         <select name="sub_subcategory_id" id="editSubSubcategorySelect" class="form-select">
                             <option value="">بدون زیردسته دوم</option>
                             @foreach ($subSubcategories as $subSub)
-                                <option value="{{ $subSub->id }}" data-subcategory="{{ $subSub->subcategory_id }}">
+                                <option value="{{ $subSub->id }}" data-subcategory="{{ $subSub->subcategory_id }}"
+                                    ${field.sub_subcategory_id == {{ $subSub->id }} ? 'selected' : ''}>
                                     {{ $subSub->name }}
                                 </option>
                             @endforeach
@@ -644,20 +714,18 @@
                         <input type="text" name="options" class="form-control"
                                value="${field.options ? Object.values(JSON.parse(field.options)).join(',') : ''}">
                     </div>
+
+                    <!-- چک‌باکس is_unique -->
+                    <div class="mb-3">
+                        <div class="checkbox-group">
+                            <input type="checkbox" name="is_unique" id="edit_is_unique" value="1" ${field.is_unique ? 'checked' : ''}>
+                            <label for="edit_is_unique">این فیلد به عنوان شناسه یکتا برای تشخیص تکراری‌بودن اکانت استفاده شود</label>
+                        </div>
+                        <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 5px;">
+                            اگر فعال باشد، سیستم از ثبت اکانت با مقدار تکراری برای این فیلد جلوگیری می‌کند.
+                        </small>
+                    </div>
                 `;
-
-                    // ست کردن زیردسته اول
-                    const editSubcategorySelect = document.getElementById('editSubcategorySelect');
-                    if (editSubcategorySelect && field.subcategory_id) {
-                        editSubcategorySelect.value = field.subcategory_id;
-                        loadSubSubcategoryInEdit(editSubcategorySelect);
-                    }
-
-                    // ست کردن زیردسته دوم
-                    const editSubSubcategorySelect = document.getElementById('editSubSubcategorySelect');
-                    if (editSubSubcategorySelect && field.sub_subcategory_id) {
-                        editSubSubcategorySelect.value = field.sub_subcategory_id;
-                    }
 
                     // نمایش/پنهان کردن گزینه‌ها
                     toggleEditTypeOptions(document.querySelector('#editFieldBody select[name="type"]'));
@@ -669,7 +737,8 @@
                 });
         }
 
-        // ✨ فیلتر زیردسته دوم وقتی زیردسته اول عوض شد
+        // ===== توابع کمکی =====
+
         function loadSubSubcategoryInEdit(subcategorySelect) {
             const subSubcategorySelect = document.getElementById('editSubSubcategorySelect');
             if (!subSubcategorySelect) return;
@@ -691,7 +760,6 @@
             }
         }
 
-        // ✨ نمایش/پنهان کردن فیلد گزینه‌ای در Modal ویرایش
         function toggleEditTypeOptions(select) {
             const optionsField = document.getElementById('editOptionsField');
             if (!optionsField) return;
@@ -703,7 +771,6 @@
             }
         }
 
-        // ✨ نمایش/پنهان کردن فیلد گزینه‌ای در Modal افزودن
         function toggleOptions(select) {
             const optionsField = document.getElementById('optionsField');
             if (!optionsField) return;
@@ -715,9 +782,10 @@
             }
         }
 
-        // ✨ فیلتر زیردسته دوم در فرم افزودن
         function toggleSubSubcategory(subcategorySelect) {
             const subSubcategorySelect = document.getElementById('addSubSubcategorySelect');
+            if (!subSubcategorySelect) return;
+
             const allOptions = subSubcategorySelect.querySelectorAll('option');
             const selectedSubcategoryId = subcategorySelect.value;
 
