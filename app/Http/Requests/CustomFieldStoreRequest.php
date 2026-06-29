@@ -34,7 +34,8 @@ class CustomFieldStoreRequest extends FormRequest
             'label' => 'required|string', // عنوان نمایشی
             'type' => 'required|in:text,number,date,select', // نوع فیلد
             'options' => 'nullable|string', // گزینه‌ها برای select
-            'sub_subcategory_id' => 'nullable|exists:sub_subcategories,id' // وابستگی اختیاری
+            'sub_subcategory_id' => 'nullable|exists:sub_subcategories,id', // وابستگی اختیاری
+            'is_unique' => 'nullable|boolean',
         ];
     }
 }

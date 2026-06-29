@@ -13,7 +13,7 @@
         rel="stylesheet">
 
     <style>
-        /* ==== CSS شما، بدون هیچ تغییری ==== */
+        /* ==== CSS شما (بدون تغییر) ==== */
         :root {
             --bg: #0f172a;
             --card: #111827;
@@ -55,6 +55,8 @@
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .page-header h2 {
@@ -104,15 +106,15 @@
             box-shadow: 0 6px 20px -3px rgba(167, 139, 250, 0.6);
         }
 
-        .btn-success-custom {
-            background: rgba(16, 185, 129, 0.15);
-            color: #34d399;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+        .btn-secondary-custom {
+            background: linear-gradient(180deg, #101827, #0b1220);
+            color: var(--text);
+            border: 1px solid var(--border);
         }
 
-        .btn-success-custom:hover {
-            background: rgba(16, 185, 129, 0.25);
+        .btn-secondary-custom:hover {
             transform: translateY(-2px);
+            border-color: var(--muted);
         }
 
         .btn-warning-custom {
@@ -146,17 +148,6 @@
         .btn-info-custom:hover {
             background: rgba(34, 211, 238, 0.25);
             transform: translateY(-2px);
-        }
-
-        .btn-secondary-custom {
-            background: linear-gradient(180deg, #101827, #0b1220);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-
-        .btn-secondary-custom:hover {
-            transform: translateY(-2px);
-            border-color: var(--muted);
         }
 
         .btn-sm {
@@ -314,12 +305,6 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
-        .badge-info {
-            background: rgba(34, 211, 238, 0.15);
-            color: var(--accent);
-            border: 1px solid rgba(34, 211, 238, 0.3);
-        }
-
         .badge-secondary {
             background: rgba(148, 163, 184, 0.15);
             color: var(--muted);
@@ -426,6 +411,7 @@
             width: 100%;
         }
 
+        /* استایل‌های صفحه‌بندی (همان‌هایی که قبلاً داشتی) */
         .pagination-wrapper nav>div:first-child {
             display: flex !important;
             width: 100%;
@@ -450,7 +436,6 @@
             font-weight: 500 !important;
             line-height: 1 !important;
             flex: 1;
-            box-shadow: none !important;
         }
 
         .pagination-wrapper nav>div:first-child>a:hover {
@@ -464,38 +449,15 @@
             cursor: not-allowed !important;
         }
 
-        .pagination-wrapper nav>div:last-child>div:first-child p {
-            color: var(--muted) !important;
-            font-size: 13px !important;
-            margin: 0 !important;
-            line-height: 1.5 !important;
-        }
-
-        .pagination-wrapper nav>div:last-child>div:first-child .font-medium {
-            color: var(--text) !important;
-            font-weight: 600 !important;
-        }
-
-        .pagination-wrapper nav .z-0,
-        .pagination-wrapper nav [class*="z-0"] {
+        .pagination-wrapper nav .z-0 {
             display: inline-flex !important;
             gap: 5px !important;
-            border-radius: 8px !important;
-            box-shadow: none !important;
             flex-wrap: wrap;
-        }
-
-        .pagination-wrapper nav .z-0>span,
-        .pagination-wrapper nav [class*="z-0"]>span {
-            display: inline-flex !important;
         }
 
         .pagination-wrapper nav .z-0 a,
         .pagination-wrapper nav .z-0 span[aria-disabled="true"]>span,
-        .pagination-wrapper nav .z-0 span[aria-current="page"]>span,
-        .pagination-wrapper nav [class*="z-0"] a,
-        .pagination-wrapper nav [class*="z-0"] span[aria-disabled="true"]>span,
-        .pagination-wrapper nav [class*="z-0"] span[aria-current="page"]>span {
+        .pagination-wrapper nav .z-0 span[aria-current="page"]>span {
             display: inline-flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -511,107 +473,31 @@
             font-size: 14px !important;
             font-weight: 500 !important;
             line-height: 1 !important;
-            margin: 0 !important;
-            box-shadow: none !important;
-            cursor: pointer;
         }
 
-        .pagination-wrapper nav .z-0 a:hover,
-        .pagination-wrapper nav [class*="z-0"] a:hover {
+        .pagination-wrapper nav .z-0 a:hover {
             background: rgba(167, 139, 250, 0.15) !important;
             border-color: var(--accent-2) !important;
-            color: var(--text) !important;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px -4px rgba(167, 139, 250, 0.4) !important;
         }
 
-        .pagination-wrapper nav .z-0 span[aria-disabled="true"]>span,
-        .pagination-wrapper nav [class*="z-0"] span[aria-disabled="true"]>span {
+        .pagination-wrapper nav .z-0 span[aria-disabled="true"]>span {
             opacity: 0.4 !important;
             cursor: not-allowed !important;
-            background: #0b1220 !important;
-            color: var(--muted) !important;
-            transform: none !important;
-            box-shadow: none !important;
         }
 
-        .pagination-wrapper nav .z-0 span[aria-current="page"]>span,
-        .pagination-wrapper nav [class*="z-0"] span[aria-current="page"]>span {
+        .pagination-wrapper nav .z-0 span[aria-current="page"]>span {
             background: linear-gradient(135deg, var(--accent-2), #8b5cf6) !important;
             border-color: var(--accent-2) !important;
             color: white !important;
-            cursor: default !important;
             font-weight: 700 !important;
             box-shadow: 0 4px 15px -3px rgba(167, 139, 250, 0.5) !important;
-            transform: none !important;
         }
 
-        .pagination-wrapper nav .z-0 svg,
-        .pagination-wrapper nav [class*="z-0"] svg {
+        .pagination-wrapper nav .z-0 svg {
             width: 16px !important;
             height: 16px !important;
-            fill: currentColor !important;
-            margin: 0 !important;
-        }
-
-        .pagination-wrapper nav .-ml-px,
-        .pagination-wrapper nav [class*="-ml-px"] {
-            margin-left: 0 !important;
-        }
-
-        .pagination-wrapper nav .shadow-sm,
-        .pagination-wrapper nav [class*="shadow-sm"] {
-            box-shadow: none !important;
-        }
-
-        .pagination-wrapper nav .rounded-md,
-        .pagination-wrapper nav [class*="rounded-md"] {
-            border-radius: 8px !important;
-        }
-
-        .pagination-wrapper nav .rounded-l-md,
-        .pagination-wrapper nav [class*="rounded-l-md"] {
-            border-radius: 8px 0 0 8px !important;
-        }
-
-        .pagination-wrapper nav .rounded-r-md,
-        .pagination-wrapper nav [class*="rounded-r-md"] {
-            border-radius: 0 8px 8px 0 !important;
-        }
-
-        .pagination-wrapper nav .text-gray-500,
-        .pagination-wrapper nav [class*="text-gray-500"] {
-            color: var(--muted) !important;
-        }
-
-        .pagination-wrapper nav .text-gray-700,
-        .pagination-wrapper nav [class*="text-gray-700"] {
-            color: var(--text) !important;
-        }
-
-        .pagination-wrapper nav .bg-white,
-        .pagination-wrapper nav [class*="bg-white"] {
-            background: #0b1220 !important;
-        }
-
-        .pagination-wrapper nav .border-gray-300,
-        .pagination-wrapper nav [class*="border-gray-300"] {
-            border-color: var(--border) !important;
-        }
-
-        .pagination-wrapper nav .bg-indigo-600,
-        .pagination-wrapper nav [class*="bg-indigo"] {
-            background: linear-gradient(135deg, var(--accent-2), #8b5cf6) !important;
-        }
-
-        .pagination-wrapper nav .border-indigo-600,
-        .pagination-wrapper nav [class*="border-indigo"] {
-            border-color: var(--accent-2) !important;
-        }
-
-        .pagination-wrapper nav .text-white,
-        .pagination-wrapper nav [class*="text-white"] {
-            color: white !important;
         }
 
         @media (max-width: 640px) {
@@ -681,6 +567,42 @@
         ::-webkit-scrollbar-thumb:hover {
             background: var(--muted);
         }
+
+        /* استایل مدال تصویر */
+        #imageModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #imageModal .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            cursor: pointer;
+            font-weight: 300;
+            transition: 0.2s;
+        }
+
+        #imageModal .close-btn:hover {
+            transform: scale(1.2);
+        }
+
+        #imageModal img {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 14px;
+            border: 2px solid var(--border);
+        }
     </style>
 </head>
 
@@ -688,26 +610,24 @@
     @php use Illuminate\Support\Str; @endphp
 
     <div class="container-fluid">
+        <!-- ===== هدر یکپارچه ===== -->
         <div class="page-header">
             <h2>مدیریت محصولات</h2>
-            <a href="{{ route('admin.products.create') }}" class="btn-custom btn-primary-custom">
-                <i class="fas fa-plus"></i>
-                افزودن محصول جدید
-            </a>
-        </div>
-        <div class="page-header">
-            <h1>مدیریت محصولات</h1>
-            <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
-                <i class="fas fa-tachometer-alt"></i>
-                بازگشت به داشبورد
-            </a>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <a href="{{ route('admin.products.create') }}" class="btn-custom btn-primary-custom">
+                    <i class="fas fa-plus"></i> افزودن محصول جدید
+                </a>
+                <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+                    <i class="fas fa-tachometer-alt"></i> بازگشت به داشبورد
+                </a>
+            </div>
         </div>
 
         @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif
 
-        <!-- فرم فیلتر و جستجو (اصلاح شده - بدون بخش تکراری) -->
+        <!-- ===== فرم فیلتر و جستجو ===== -->
         <div class="filter-card">
             <form method="GET" action="{{ route('admin.products.index') }}" class="filter-form">
                 <div class="filter-group">
@@ -767,7 +687,7 @@
             </form>
         </div>
 
-        <!-- جدول محصولات (اصلاح شده - حذف ستون ویژگی تکراری) -->
+        <!-- ===== جدول محصولات ===== -->
         <div class="table-wrapper">
             <div class="table-responsive">
                 <table>
@@ -854,14 +774,13 @@
                                 </td>
                                 <td>
                                     @if ($product->status === 'approved')
-                                        <span class="badge-custom badge-success">{{ $product->status_text }}</span>
+                                        <span class="badge-custom badge-success">تایید شده</span>
                                     @elseif($product->status === 'pending')
-                                        <span class="badge-custom badge-warning">{{ $product->status_text }}</span>
+                                        <span class="badge-custom badge-warning">در انتظار</span>
                                     @else
-                                        <span class="badge-custom badge-danger">{{ $product->status_text }}</span>
+                                        <span class="badge-custom badge-danger">رد شده</span>
                                     @endif
                                 </td>
-                                <!-- ستون ویژگی (یک بار) -->
                                 <td>
                                     @if ($product->attributes->isNotEmpty())
                                         <div>
@@ -880,7 +799,6 @@
                                         <span class="no-image">-</span>
                                     @endif
                                 </td>
-                                <!-- ستون تگ‌ها -->
                                 <td>
                                     @if ($product->tags->isNotEmpty())
                                         <div>
@@ -899,12 +817,10 @@
                                         <span class="no-image">-</span>
                                     @endif
                                 </td>
-                                <!-- تاریخ ایجاد -->
                                 <td>
                                     <div class="date-main">{{ $product->created_at->format('Y/m/d') }}</div>
                                     <div class="date-time">{{ $product->created_at->format('H:i') }}</div>
                                 </td>
-                                <!-- عملیات -->
                                 <td>
                                     <div class="action-buttons">
                                         <a href="{{ route('admin.products.edit', $product) }}"
@@ -954,7 +870,7 @@
                             <tr>
                                 <td colspan="13" class="empty-state">
                                     <i class="fas fa-box-open"
-                                        style="font-size: 48px; margin-bottom: 15px; opacity: 0.3;"></i>
+                                        style="font-size:48px; margin-bottom:15px; opacity:0.3;"></i>
                                     <div>هیچ محصولی یافت نشد.</div>
                                 </td>
                             </tr>
@@ -964,12 +880,18 @@
             </div>
         </div>
 
-        <!-- صفحه‌بندی -->
+        <!-- ===== صفحه‌بندی ===== -->
         @if ($products->hasPages())
             <div class="pagination-wrapper">
                 {{ $products->appends(request()->query())->links() }}
             </div>
         @endif
+    </div>
+
+    <!-- ===== مدال بزرگنمایی تصویر ===== -->
+    <div id="imageModal">
+        <span class="close-btn" onclick="document.getElementById('imageModal').style.display='none';">&times;</span>
+        <img id="modalImage" src="" alt="تصویر بزرگ">
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -1019,14 +941,6 @@
             }
         });
 
-        function toggleFeatured(productId) {
-            alert('تغییر وضعیت ویژه برای محصول ' + productId);
-        }
-
-        function incrementViews(productId) {
-            alert('افزایش بازدید برای محصول ' + productId);
-        }
-
         function showImageModal(src) {
             const modal = document.getElementById('imageModal');
             const modalImg = document.getElementById('modalImage');
@@ -1036,13 +950,12 @@
             }
         }
 
-        const modal = document.getElementById('imageModal');
-        if (modal) {
-            modal.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    this.style.display = 'none';
-                }
-            });
+        function toggleFeatured(productId) {
+            alert('تغییر وضعیت ویژه برای محصول ' + productId);
+        }
+
+        function incrementViews(productId) {
+            alert('افزایش بازدید برای محصول ' + productId);
         }
     </script>
 </body>

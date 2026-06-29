@@ -18,7 +18,8 @@ class CustomField extends Model
         'options',
         'status',
         'required',
-        'order'
+        'order',
+    'is_unique'
     ];
 
     protected $attributes = [

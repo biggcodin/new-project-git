@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 
 <head>
     <meta charset="UTF-8">
@@ -13,7 +13,6 @@
         rel="stylesheet">
 
     <style>
-        /* ... (همان استایل‌های قبلی، بدون تغییر) ... */
         :root {
             --bg: #0f172a;
             --card: #111827;
@@ -49,9 +48,14 @@
         }
 
         .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 30px;
             padding-bottom: 20px;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .page-header h2 {
@@ -60,6 +64,12 @@
             font-weight: 700;
             color: var(--text);
             letter-spacing: -0.02em;
+        }
+
+        .btn-group-wrapper {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         .alert {
@@ -88,6 +98,7 @@
             align-items: center;
             gap: 8px;
             text-decoration: none;
+            white-space: nowrap;
         }
 
         .btn-success-custom {
@@ -186,6 +197,7 @@
             border-bottom: 1px solid var(--border);
             color: var(--text);
             vertical-align: middle;
+            text-align: right;
         }
 
         tbody tr:last-child td {
@@ -238,6 +250,7 @@
             display: flex;
             gap: 5px;
             flex-wrap: wrap;
+            justify-content: flex-start;
         }
 
         .pagination-wrapper {
@@ -352,7 +365,7 @@
         }
 
         .checkbox-group label {
-            color: var(--muted);
+            color: var(--text);
             font-size: 13px;
             font-weight: 500;
             margin: 0;
@@ -372,6 +385,15 @@
 
             .action-buttons .btn-custom {
                 width: 100%;
+                justify-content: center;
+            }
+
+            .btn-group-wrapper {
+                width: 100%;
+            }
+
+            .btn-group-wrapper .btn-custom {
+                flex: 1;
                 justify-content: center;
             }
         }
@@ -400,23 +422,19 @@
     <div class="container">
         <div class="page-header">
             <h2>مدیریت فیلد‌های اختصاصی</h2>
+            <div class="btn-group-wrapper">
+                <a href="#addFieldModal" data-bs-toggle="modal" class="btn-custom btn-success-custom">
+                    <i class="fas fa-plus"></i> افزودن فیلد
+                </a>
+                <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
+                    <i class="fas fa-tachometer-alt"></i> بازگشت به داشبورد
+                </a>
+            </div>
         </div>
 
         @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
         @endif
-
-        <!-- دکمه افزودن -->
-        <div style="margin-bottom: 30px;">
-            <a href="#addFieldModal" data-bs-toggle="modal" class="btn-custom btn-success-custom">
-                <i class="fas fa-plus"></i>
-                افزودن فیلد
-            </a>
-            <a href="{{ route('admin.dashboard') }}" class="btn-custom btn-secondary-custom">
-                <i class="fas fa-tachometer-alt"></i>
-                بازگشت به داشبورد
-            </a>
-        </div>
 
         <!-- جدول لیست فیلد‌ها -->
         <div class="table-wrapper">
@@ -466,8 +484,7 @@
                                     <div class="action-buttons">
                                         <button class="btn-custom btn-warning-custom btn-sm"
                                             onclick="openEditModal({{ $field->id }})">
-                                            <i class="fas fa-edit"></i>
-                                            ویرایش
+                                            <i class="fas fa-edit"></i> ویرایش
                                         </button>
                                         <form action="{{ route('admin.custom-fields.destroy', $field->id) }}"
                                             method="POST" class="d-inline">
@@ -475,8 +492,7 @@
                                             @method('DELETE')
                                             <button type="submit" class="btn-custom btn-danger-custom btn-sm"
                                                 onclick="return confirm('آیا از حذف این فیلد اطمینان دارید؟')">
-                                                <i class="fas fa-trash"></i>
-                                                حذف
+                                                <i class="fas fa-trash"></i> حذف
                                             </button>
                                         </form>
                                     </div>
@@ -494,7 +510,7 @@
         </div>
 
         <!-- ================================ -->
-        <!-- Modal افزودن فیلد (با چک‌باکس is_unique) -->
+        <!-- Modal افزودن فیلد -->
         <!-- ================================ -->
         <div class="modal fade" id="addFieldModal" tabindex="-1">
             <div class="modal-dialog">
@@ -550,14 +566,14 @@
                                     placeholder="Gold V, Platinum III, Legend">
                             </div>
 
-                            <!-- ✅ چک‌باکس is_unique -->
+                            <!-- چک‌باکس is_unique -->
                             <div class="mb-3">
                                 <div class="checkbox-group">
                                     <input type="checkbox" name="is_unique" id="add_is_unique" value="1">
                                     <label for="add_is_unique">این فیلد به عنوان شناسه یکتا برای تشخیص تکراری‌بودن
                                         اکانت استفاده شود</label>
                                 </div>
-                                <small style="color: var(--muted); font-size: 11px;">
+                                <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 5px;">
                                     اگر فعال باشد، سیستم از ثبت اکانت با مقدار تکراری برای این فیلد جلوگیری می‌کند.
                                 </small>
                             </div>
@@ -571,7 +587,7 @@
         </div>
 
         <!-- ================================ -->
-        <!-- Modal ویرایش فیلد (با چک‌باکس is_unique) -->
+        <!-- Modal ویرایش فیلد -->
         <!-- ================================ -->
         <div class="modal fade" id="editFieldModal" tabindex="-1">
             <div class="modal-dialog">
@@ -601,7 +617,7 @@
         // ===== توابع موجود =====
 
         function loadDynamicFields() {
-            const subcategoryId = document.getElementById('addSubcategorySelect').value;
+            const subcategoryId = document.getElementById('addSubcategorySelect')?.value;
             const subSubcategoryId = document.getElementById('addSubSubcategorySelect')?.value;
             const container = document.getElementById('custom-fields');
             if (!container) return;
@@ -616,12 +632,12 @@
                         <div class="mb-3">
                             <label class="form-label">${field.label}</label>
                             ${field.type === 'select' ? `
-                                                        <select name="attributes[${key}]" class="form-control">
-                                                            ${field.options.map(opt => `<option>${opt}</option>`).join('')}
-                                                        </select>
-                                                    ` : `
-                                                        <input type="${field.type}" name="attributes[${key}]" class="form-control" value="">
-                                                    `}
+                                                                <select name="attributes[${key}]" class="form-control">
+                                                                    ${field.options.map(opt => `<option>${opt}</option>`).join('')}
+                                                                </select>
+                                                            ` : `
+                                                                <input type="${field.type}" name="attributes[${key}]" class="form-control" value="">
+                                                            `}
                         </div>`;
                     }
                 })
@@ -699,13 +715,13 @@
                                value="${field.options ? Object.values(JSON.parse(field.options)).join(',') : ''}">
                     </div>
 
-                    <!-- ✅ چک‌باکس is_unique -->
+                    <!-- چک‌باکس is_unique -->
                     <div class="mb-3">
                         <div class="checkbox-group">
                             <input type="checkbox" name="is_unique" id="edit_is_unique" value="1" ${field.is_unique ? 'checked' : ''}>
                             <label for="edit_is_unique">این فیلد به عنوان شناسه یکتا برای تشخیص تکراری‌بودن اکانت استفاده شود</label>
                         </div>
-                        <small style="color: var(--muted); font-size: 11px;">
+                        <small style="color: var(--muted); font-size: 11px; display: block; margin-top: 5px;">
                             اگر فعال باشد، سیستم از ثبت اکانت با مقدار تکراری برای این فیلد جلوگیری می‌کند.
                         </small>
                     </div>

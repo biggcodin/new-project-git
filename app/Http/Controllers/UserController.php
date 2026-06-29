@@ -5,29 +5,35 @@ namespace App\Http\Controllers;
 use App\Http\Requests\WalletChargeRequest;
 use App\Models\Product;
 use App\Models\ProductMedia;
+use App\Models\SellerApplication;
 use App\Models\SubSubcategory;
 use App\Models\WalletTransaction;
 use App\Models\Order;
 use App\Models\Tag;
+use App\Models\CustomField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
     /**
-     * نمایش صفحه شارژ کیف پول
+     * پاک‌سازی قیمت و تبدیل به عدد صحیح
      */
+    private function cleanPrice($price): int
+    {
+        $clean = preg_replace('/[^0-9.]/', '', (string) $price);
+        return (int) round((float) $clean);
+    }
+
     public function walletCharge()
     {
         return view('user.wallet-charge');
     }
 
-    /**
-     * نمایش تاریخچه تراکنش‌های کیف پول
-     */
     public function walletHistory(Request $request)
     {
         $query = WalletTransaction::where('user_id', auth()->id());
@@ -61,9 +67,6 @@ class UserController extends Controller
         return view('user.wallet-history', compact('transactions', 'balance', 'types', 'statuses'));
     }
 
-    /**
-     * شارژ کیف پول
-     */
     public function charge(WalletChargeRequest $request)
     {
         $amount = (int) $request->input('amount');
@@ -100,17 +103,11 @@ class UserController extends Controller
         }
     }
 
-    /**
-     * شبیه‌سازی درگاه پرداخت (موقت)
-     */
     private function mockPaymentGateway(WalletTransaction $transaction): void
     {
         $transaction->complete();
     }
 
-    /**
-     * نمایش خریدهای کاربر
-     */
     public function purchases(Request $request)
     {
         $query = Order::where('user_id', auth()->id());
@@ -133,9 +130,6 @@ class UserController extends Controller
         return view('user.purchases', compact('purchases', 'statuses'));
     }
 
-    /**
-     * نمایش جزئیات یک سفارش
-     */
     public function orderDetails(Order $order)
     {
         if ($order->user_id !== auth()->id()) {
@@ -148,9 +142,6 @@ class UserController extends Controller
 
     // ======================== بخش آگهی‌های من ========================
 
-    /**
-     * نمایش لیست محصولات (آگهی‌های) کاربر
-     */
     public function ads()
     {
         $products = Product::where('user_id', auth()->id())
@@ -160,23 +151,17 @@ class UserController extends Controller
         return view('user.ads', compact('products'));
     }
 
-    /**
-     * نمایش فرم ویرایش آگهی ردشده
-     */
     public function editProductApplication(Product $product)
     {
-        // بررسی مالکیت
         if ($product->user_id !== auth()->id()) {
             abort(403, 'دسترسی غیرمجاز');
         }
 
-        // فقط آگهی‌های ردشده قابل ویرایش هستند
         if ($product->status !== 'rejected') {
             return redirect()->route('user.ads')
                 ->with('error', 'فقط آگهی‌های ردشده قابل ویرایش هستند.');
         }
 
-        // دریافت نوع بازی‌ها برای نمایش در فرم
         $gameTypes = SubSubcategory::whereHas('subcategory', function ($q) {
             $q->where('name', 'اکانت')->whereHas('category', function ($qq) {
                 $qq->where('name', 'بازی');
@@ -188,34 +173,26 @@ class UserController extends Controller
         return view('user.edit-ad', compact('product', 'gameTypes', 'tags'));
     }
 
-    /**
-     * بروزرسانی آگهی ردشده و ارسال مجدد
-     */
     public function updateProductApplication(Request $request, Product $product)
     {
-        // بررسی مالکیت
         if ($product->user_id !== auth()->id()) {
             abort(403, 'دسترسی غیرمجاز');
         }
 
-        // فقط آگهی‌های ردشده قابل ویرایش هستند
         if ($product->status !== 'rejected') {
             return redirect()->route('user.ads')
                 ->with('error', 'فقط آگهی‌های ردشده قابل ویرایش هستند.');
         }
 
-        // ====== تبدیل tags از JSON به آرایه (قبل از اعتبارسنجی) ======
         if ($request->has('tags')) {
             $tags = json_decode($request->tags, true);
             $request->merge(['tags' => is_array($tags) ? $tags : []]);
         }
 
-        // ====== اعتبارسنجی ======
         $validated = $request->validate([
             'sub_subcategory_id' => 'required|exists:sub_subcategories,id',
             'name'               => 'required|string|max:255',
             'price'              => 'required|numeric|min:0',
-            'quantity'           => 'required|integer|min:0',
             'description'        => 'nullable|string',
             'cover'              => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'media.*'            => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov,avi,mkv|max:20480',
@@ -225,22 +202,37 @@ class UserController extends Controller
             'remove_cover'       => 'nullable|boolean',
         ]);
 
-        // دریافت زیرزیردسته جدید برای به‌روزرسانی دسته‌بندی
         $subSub = SubSubcategory::with('subcategory.category')->findOrFail($request->sub_subcategory_id);
+
+        // ========== بررسی فیلد یکتا هنگام ویرایش ==========
+        $uniqueKey = CustomField::getUniqueFieldKeyForSubSubcategory($request->sub_subcategory_id);
+        if ($uniqueKey) {
+            $uniqueValue = $request->input('attributes.' . $uniqueKey);
+            if ($uniqueValue) {
+                $exists = Product::where('sub_subcategory_id', $request->sub_subcategory_id)
+                    ->whereHas('attributes', function ($q) use ($uniqueKey, $uniqueValue) {
+                        $q->where('key', $uniqueKey)->where('value', (string)$uniqueValue);
+                    })
+                    ->where('id', '!=', $product->id)
+                    ->whereIn('status', ['pending', 'approved'])
+                    ->exists();
+
+                if ($exists) {
+                    return back()->withInput()->with('error', 'این مقدار برای فیلد یکتا (' . $uniqueKey . ') قبلاً برای این نوع بازی ثبت شده است.');
+                }
+            }
+        }
 
         DB::beginTransaction();
 
         try {
-            // به‌روزرسانی فیلدهای اصلی و دسته‌بندی
             $product->sub_subcategory_id = $request->sub_subcategory_id;
             $product->category_id = $subSub->subcategory->category->id;
             $product->subcategory_id = $subSub->subcategory->id;
             $product->name = $request->name;
-            $product->price = $request->price;
-            $product->quantity = $request->quantity;
+            $product->price = $this->cleanPrice($request->price);
             $product->description = $request->description;
 
-            // حذف کاور در صورت درخواست
             if ($request->boolean('remove_cover')) {
                 if ($product->cover) {
                     Storage::disk('public')->delete($product->cover);
@@ -248,7 +240,6 @@ class UserController extends Controller
                 }
             }
 
-            // آپلود کاور جدید (در صورت وجود)
             if ($request->hasFile('cover')) {
                 if ($product->cover) {
                     Storage::disk('public')->delete($product->cover);
@@ -257,9 +248,8 @@ class UserController extends Controller
                 $product->cover = $coverPath;
             }
 
-            $product->save(); // ذخیره اولیه برای دسته‌بندی و کاور
+            $product->save();
 
-            // آپلود مدیاهای جدید (فقط اضافه می‌شوند، حذف جداگانه انجام می‌شود)
             if ($request->hasFile('media')) {
                 foreach ($request->file('media') as $file) {
                     $path = $file->store('products_media', 'public');
@@ -272,12 +262,10 @@ class UserController extends Controller
                 }
             }
 
-            // بروزرسانی تگ‌ها
             if ($request->has('tags')) {
                 $product->tags()->sync($request->tags);
             }
 
-            // بروزرسانی ویژگی‌های اختصاصی (attributes)
             $product->attributes()->delete();
             $attributes = $request->input('attributes', []);
             foreach ($attributes as $key => $value) {
@@ -289,11 +277,9 @@ class UserController extends Controller
                 }
             }
 
-            // تغییر وضعیت به pending و پاک کردن دلیل رد
             $product->status = 'pending';
             $product->rejection_reason = null;
 
-            // ====== اصلاح بخش meta ======
             $meta = $this->safeMeta($product->meta);
             unset($meta['admin_message']);
             $product->meta = $meta;
@@ -311,14 +297,10 @@ class UserController extends Controller
         }
     }
 
-    /**
-     * حذف یک فایل رسانه (برای کاربر عادی)
-     */
     public function destroyMedia($id)
     {
         $media = ProductMedia::findOrFail($id);
 
-        // بررسی مالکیت محصول
         if ($media->product->user_id !== auth()->id()) {
             return response()->json(['success' => false, 'message' => 'دسترسی غیرمجاز'], 403);
         }
@@ -329,38 +311,106 @@ class UserController extends Controller
         return response()->json(['success' => true]);
     }
 
+    // ======================== بخش ویرایش اطلاعات هویتی ========================
+
+    public function editIdentity()
+    {
+        $user = auth()->user();
+
+        $identity = SellerApplication::where('user_id', $user->id)
+            ->where('status', 'rejected')
+            ->latest()
+            ->first();
+
+        if (!$identity) {
+            return redirect()->route('user.panel')
+                ->with('error', 'شما هیچ درخواست هویت رد شده‌ای ندارید.');
+        }
+
+        return view('user.identity-edit', compact('identity'));
+    }
+
+    public function updateIdentity(Request $request)
+    {
+        $user = auth()->user();
+
+        $identity = SellerApplication::where('user_id', $user->id)
+            ->where('status', 'rejected')
+            ->latest()
+            ->first();
+
+        if (!$identity) {
+            return redirect()->route('user.panel')
+                ->with('error', 'درخواست هویت رد شده‌ای یافت نشد.');
+        }
+
+        $validated = $request->validate([
+            'is_adult'       => 'required|in:yes,no',
+            'first_name'     => 'required|string|max:100',
+            'last_name'      => 'required|string|max:100',
+            'national_code'  => [
+                'required',
+                'string',
+                'size:10',
+                Rule::unique('seller_applications', 'national_code')
+                    ->where(function ($query) {
+                        return $query->whereIn('status', ['pending', 'approved']);
+                    })
+                    ->ignore($identity->id),
+            ],
+            'phone'          => 'required|string|max:20',
+            'birth_date'     => 'nullable|string|max:20',
+            'card_number'    => 'required|string|max:20',
+            'id_card_image'  => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
+
+        $imagePath = $identity->national_card_image;
+        if ($request->hasFile('id_card_image')) {
+            if ($imagePath) {
+                Storage::disk('public')->delete($imagePath);
+            }
+            $imagePath = $request->file('id_card_image')->store('seller_documents/national_cards', 'public');
+        }
+
+        $identity->update([
+            'is_over_18'           => $request->is_adult === 'yes',
+            'first_name'           => $request->first_name,
+            'last_name'            => $request->last_name,
+            'national_code'        => $request->national_code,
+            'phone'                => $request->phone,
+            'birth_date'           => $request->birth_date,
+            'bank_card_number'     => $request->card_number,
+            'national_card_image'  => $imagePath,
+            'status'               => 'pending',
+            'rejection_reason'     => null,
+            'admin_message'        => null,
+            'admin_id'             => null,
+            'reviewed_at'          => null,
+        ]);
+
+        $user->update(['seller_request_status' => 'pending']);
+
+        return redirect()->route('user.ads')
+            ->with('success', 'اطلاعات هویتی شما با موفقیت ویرایش و مجدداً برای بررسی ارسال شد.');
+    }
+
     // ======================== سایر متدها ========================
 
-    /**
-     * نمایش صفحه چت و پیام‌ها
-     */
     public function chat()
     {
         return view('user.chat');
     }
 
-    /**
-     * نمایش فرم ویرایش پروفایل
-     */
     public function profileEdit()
     {
         return view('user.profile-edit');
     }
 
-    /**
-     * به‌روزرسانی پروفایل
-     */
     public function profileUpdate(Request $request)
     {
         return back()->with('success', 'پروفایل با موفقیت به‌روزرسانی شد.');
     }
 
-    /**
-     * تبدیل ایمن meta به آرایه
-     *
-     * @param mixed $meta
-     * @return array
-     */
     private function safeMeta($meta): array
     {
         if (is_array($meta)) {

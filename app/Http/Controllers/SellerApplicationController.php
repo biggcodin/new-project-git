@@ -18,6 +18,16 @@ use Illuminate\Support\Facades\DB;
 
 class SellerApplicationController extends Controller
 {
+    /**
+     * پاک‌سازی قیمت و تبدیل به عدد صحیح
+     */
+    private function cleanPrice($price): int
+    {
+        // حذف کاما و کاراکترهای غیرعددی (به جز نقطه)
+        $clean = preg_replace('/[^0-9.]/', '', (string) $price);
+        return (int) round((float) $clean);
+    }
+
     public function createProduct()
     {
         if (!auth()->check()) {
@@ -26,25 +36,27 @@ class SellerApplicationController extends Controller
 
         $user = auth()->user();
 
-        // ====== بررسی وضعیت هویت ======
-        $identityApproved = $user->hasApprovedIdentity() || $user->isSeller();
-        $identityData = null;
-        $identityRejected = false;
+        $showIdentityStep = true;
 
-        if ($identityApproved) {
+        if ($user->isSeller() || $user->hasApprovedIdentity()) {
+            $showIdentityStep = false;
+        }
+
+        if ($user->hasPendingOrApprovedIdentity()) {
+            $showIdentityStep = false;
+        }
+
+        if ($user->sellerApplications()->where('status', 'rejected')->exists()) {
+            return redirect()->route('user.identity.edit')
+                ->with('info', 'درخواست هویت شما رد شده است. لطفاً اطلاعات خود را ویرایش کنید.');
+        }
+
+        $identityData = null;
+        if (!$showIdentityStep) {
             $identityData = SellerApplication::where('user_id', $user->id)
-                ->where('status', 'approved')
+                ->whereIn('status', ['pending', 'approved'])
                 ->latest()
                 ->first();
-        } else {
-            $rejectedIdentity = SellerApplication::where('user_id', $user->id)
-                ->where('status', 'rejected')
-                ->latest()
-                ->first();
-            if ($rejectedIdentity) {
-                $identityRejected = true;
-                $identityData = $rejectedIdentity;
-            }
         }
 
         $gameTypes = SubSubcategory::whereHas('subcategory', function ($q) {
@@ -58,12 +70,10 @@ class SellerApplicationController extends Controller
         return view('seller.product.create', compact(
             'gameTypes',
             'tags',
-            'identityApproved',
-            'identityData',
-            'identityRejected'
+            'showIdentityStep',
+            'identityData'
         ));
     }
-
 
     public function getFields(Request $request)
     {
@@ -82,18 +92,15 @@ class SellerApplicationController extends Controller
     {
         $user = auth()->user();
 
-        // اگر کاربر فروشنده است، نیازی به احراز هویت مجدد نیست
         $identityNotApproved = $request->boolean('identity_not_approved', !$user->hasApprovedIdentity());
         if ($user->isSeller()) {
             $identityNotApproved = false;
         }
 
-        // اعتبارسنجی با شرط‌های پویا
         $rules = [
             'sub_subcategory_id' => 'required|exists:sub_subcategories,id',
             'name'               => 'required|string|max:255',
             'price'              => 'required|numeric|min:0',
-            'quantity'           => 'required|integer|min:0',
             'description'        => 'nullable|string',
             'cover'              => 'required|image|mimes:jpeg,png,jpg,webp|max:2048',
             'media.*'            => 'nullable|file|mimes:jpeg,png,jpg,webp,mp4,mov,avi,mkv|max:20480',
@@ -101,7 +108,6 @@ class SellerApplicationController extends Controller
             'attributes'         => 'nullable|array',
         ];
 
-        // اگر هویت تأیید نشده باشد، فیلدهای هویتی را اضافه کن
         if ($identityNotApproved) {
             $rules['is_adult'] = 'required|in:yes,no';
             $rules['first_name'] = 'required|string|max:100';
@@ -121,27 +127,20 @@ class SellerApplicationController extends Controller
 
         $validated = $request->validate($rules);
 
-        // ========== بررسی تکراری نبودن آگهی ==========
-        $existingProduct = Product::where('user_id', $user->id)
-            ->where('sub_subcategory_id', $request->sub_subcategory_id)
-            ->where('status', 'pending')
-            ->exists();
-
-        if ($existingProduct) {
-            return back()->withInput()->with('error', 'شما قبلاً یک آگهی در انتظار بررسی برای این نوع بازی ثبت کرده‌اید.');
-        }
-
-        // ========== بررسی فیلد یکتا ==========
+        // ========== بررسی فیلد یکتا (is_unique) ==========
         $uniqueKey = CustomField::getUniqueFieldKeyForSubSubcategory($request->sub_subcategory_id);
         if ($uniqueKey) {
-            $uniqueValue = $request->attributes[$uniqueKey] ?? null;
+            $uniqueValue = $request->input('attributes.' . $uniqueKey);
             if ($uniqueValue) {
-                $exists = Product::whereHas('attributes', function ($q) use ($uniqueKey, $uniqueValue) {
-                    $q->where('key', $uniqueKey)->where('value', (string)$uniqueValue);
-                })->where('status', 'pending')->exists();
+                $exists = Product::where('sub_subcategory_id', $request->sub_subcategory_id)
+                    ->whereHas('attributes', function ($q) use ($uniqueKey, $uniqueValue) {
+                        $q->where('key', $uniqueKey)->where('value', (string)$uniqueValue);
+                    })
+                    ->whereIn('status', ['pending', 'approved'])
+                    ->exists();
 
                 if ($exists) {
-                    return back()->withInput()->with('error', 'یک اکانت با این مشخصات (فیلد ' . $uniqueKey . ') قبلاً ثبت شده است.');
+                    return back()->withInput()->with('error', 'یک اکانت با این مشخصات (فیلد ' . $uniqueKey . ') قبلاً برای این نوع بازی ثبت شده است.');
                 }
             }
         }
@@ -149,7 +148,6 @@ class SellerApplicationController extends Controller
         DB::beginTransaction();
 
         try {
-            // ========== مدیریت هویت (فقط در صورت عدم تأیید) ==========
             if ($identityNotApproved) {
                 $rejectedApplication = SellerApplication::where('user_id', $user->id)
                     ->where('sub_subcategory_id', $request->sub_subcategory_id)
@@ -221,14 +219,13 @@ class SellerApplicationController extends Controller
                 'name'               => $request->name,
                 'slug'               => $slug,
                 'description'        => $request->description,
-                'price'              => $request->price,
-                'quantity'           => $request->quantity,
+                'price'              => $this->cleanPrice($request->price),
+                'quantity'           => 1,
                 'cover'              => $coverPath,
                 'status'             => 'pending',
                 'published_at'       => now(),
             ]);
 
-            // تگ‌ها
             if ($request->filled('tags')) {
                 $tagIds = json_decode($request->tags, true) ?? [];
                 if (!empty($tagIds)) {
@@ -236,7 +233,6 @@ class SellerApplicationController extends Controller
                 }
             }
 
-            // ویژگی‌های اختصاصی
             $attributes = $request->input('attributes', []);
             foreach ($attributes as $key => $value) {
                 if (!empty($value)) {
@@ -247,7 +243,6 @@ class SellerApplicationController extends Controller
                 }
             }
 
-            // مدیا
             if ($request->hasFile('media')) {
                 foreach ($request->file('media') as $file) {
                     $path = $file->store('products_media', 'public');

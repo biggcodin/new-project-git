@@ -14,30 +14,71 @@ class SellerApplicationAdminController extends Controller
 {
     /**
      * نمایش لیست یکپارچه کاربران + وضعیت هویتی + محصولات
+     * با قابلیت جستجو، فیلتر و مرتب‌سازی بر اساس آخرین درخواست
      */
-    public function index()
+    public function index(Request $request)
     {
-        // دریافت همه کاربرانی که حداقل یک درخواست هویتی یا محصول دارند
-        $users = User::where(function ($query) {
-            $query->whereHas('sellerApplications')
-                ->orWhereHas('products');
-        })
-        ->with([
-            'sellerApplications' => function ($q) {
-                $q->latest(); // آخرین درخواست هویت
-            },
-            'products' => function ($q) {
-                $q->with([
-                    'category',
-                    'subcategory',
-                    'subSubcategory',
-                    'attributes',
-                    'media'
-                ])->orderBy('created_at', 'desc');
+        $query = User::query();
+
+        // ========== فیلترها ==========
+        // جستجو در نام کاربر، نام‌کاربری و نام محصول
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('username', 'like', "%{$search}%")
+                  ->orWhereHas('products', function ($pq) use ($search) {
+                      $pq->where('name', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        // فیلتر وضعیت هویت (بر اساس آخرین درخواست)
+        if ($identityStatus = $request->input('identity_status')) {
+            if ($identityStatus === 'none') {
+                // کاربرانی که هیچ درخواست هویتی ندارند
+                $query->whereDoesntHave('sellerApplications');
+            } else {
+                $query->whereHas('sellerApplications', function ($sq) use ($identityStatus) {
+                    $sq->where('status', $identityStatus);
+                });
             }
-        ])
-        ->orderBy('created_at', 'desc')
-        ->paginate(15);
+        }
+
+        // فیلتر وضعیت محصول (کاربرانی که حداقل یک محصول با این وضعیت دارند)
+        if ($productStatus = $request->input('product_status')) {
+            $query->whereHas('products', function ($pq) use ($productStatus) {
+                $pq->where('status', $productStatus);
+            });
+        }
+
+        // ========== مرتب‌سازی ==========
+        // مرتب‌سازی بر اساس جدیدترین درخواست هویت (زمان ایجاد آخرین seller_application)
+        $query->orderBy(
+            SellerApplication::select('created_at')
+                ->whereColumn('user_id', 'users.id')
+                ->latest()
+                ->limit(1),
+            'desc'
+        );
+
+        // ========== بارگذاری روابط ==========
+        $users = $query
+            ->with([
+                'sellerApplications' => function ($q) {
+                    $q->latest(); // آخرین درخواست هویت
+                },
+                'products' => function ($q) {
+                    $q->with([
+                        'category',
+                        'subcategory',
+                        'subSubcategory',
+                        'attributes',
+                        'media'
+                    ])->orderBy('created_at', 'desc');
+                }
+            ])
+            ->paginate(15)
+            ->appends($request->query()); // حفظ فیلترها در صفحه‌بندی
 
         return view('admin.seller-applications.index', compact('users'));
     }
@@ -86,7 +127,7 @@ class SellerApplicationAdminController extends Controller
                 'admin_message' => $request->admin_message ?? 'هویت شما تأیید شد.',
                 'admin_id'      => Auth::id(),
                 'reviewed_at'   => now(),
-                'rejection_reason' => null, // پاک کردن دلیل رد قبلی
+                'rejection_reason' => null,
             ]);
 
             // تغییر نقش کاربر به فروشنده
@@ -152,7 +193,7 @@ class SellerApplicationAdminController extends Controller
     // ================================================================
 
     /**
-     * تأیید محصول (آگهی)
+     * تأیید محصول (آگهی) – فقط در صورتی که هویت کاربر تأیید شده باشد
      */
     public function approveProduct(Request $request, Product $product)
     {
@@ -165,6 +206,15 @@ class SellerApplicationAdminController extends Controller
             return back()->with('error', 'این محصول قبلاً بررسی شده است.');
         }
 
+        // بررسی وضعیت هویت کاربر
+        $user = $product->user;
+        $latestIdentity = $user->sellerApplications()->latest()->first();
+
+        // اگر هویت کاربر رد شده باشد یا اصلاً درخواست هویتی نداشته باشد، اجازه تأیید محصول داده نشود
+        if (!$latestIdentity || $latestIdentity->status === 'rejected') {
+            return back()->with('error', 'امکان تأیید آگهی وجود ندارد زیرا هویت کاربر تأیید نشده است.');
+        }
+
         DB::beginTransaction();
         try {
             $product->update([
@@ -175,7 +225,6 @@ class SellerApplicationAdminController extends Controller
 
             // در صورت نیاز، پیام ادمین را در متا ذخیره کن
             if ($request->filled('admin_message')) {
-                // تبدیل ایمن meta به آرایه
                 $meta = $this->safeMeta($product->meta);
                 $meta['admin_message'] = $request->admin_message;
                 $product->update(['meta' => $meta]);

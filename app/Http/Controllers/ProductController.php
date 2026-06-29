@@ -7,6 +7,7 @@ use App\Models\Subcategory;
 use App\Models\SubSubcategory;
 use App\Models\Tag;
 use App\Models\ProductMedia;
+use App\Models\CustomField;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -17,6 +18,15 @@ use Illuminate\Support\Facades\Schema;
 
 class ProductController extends Controller
 {
+    /**
+     * پاک‌سازی قیمت و تبدیل به عدد صحیح
+     */
+    private function cleanPrice($price): int
+    {
+        $clean = preg_replace('/[^0-9.]/', '', (string) $price);
+        return (int) round((float) $clean);
+    }
+
     public function create()
     {
         $categories = Category::select('id', 'name')->orderBy('name')->get();
@@ -43,24 +53,35 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->validate([
-            'search'    => 'nullable|string|max:100',
-            'category'  => 'nullable|integer|exists:categories,id',
-            'page'      => 'nullable|integer|min:1',
-        ]);
+        $search = $request->input('search');
+        $category = $request->input('category');
+        $subcategory = $request->input('subcategory');
+        $subSubcategory = $request->input('sub_subcategory');
 
         $products = Product::query()
-            ->with('category:id,name')
+            ->with(['category:id,name', 'subcategory:id,name', 'subSubcategory:id,name'])
             ->with('attributes')
-            ->when($filters['search'] ?? null, fn($q, $s) =>
-                $q->where('name', 'like', "%{$s}%")
-            )
-            ->when($filters['category'] ?? null, fn($q, $catId) =>
-                $q->where('category_id', $catId)
-            )
+            ->when($search, function ($query) use ($search) {
+                return $query->where('name', 'like', "%{$search}%");
+            })
+            ->when($category, function ($query) use ($category) {
+                return $query->where('category_id', $category);
+            })
+            ->when($subcategory, function ($query) use ($subcategory) {
+                return $query->where('subcategory_id', $subcategory);
+            })
+            ->when($subSubcategory, function ($query) use ($subSubcategory) {
+                return $query->where('sub_subcategory_id', $subSubcategory);
+            })
             ->orderByDesc('id')
-            ->paginate(10)
-            ->appends($filters);
+            ->paginate($request->input('per', 10))
+            ->appends([
+                'search' => $search,
+                'category' => $category,
+                'subcategory' => $subcategory,
+                'sub_subcategory' => $subSubcategory,
+                'per' => $request->input('per', 10),
+            ]);
 
         $categories = Category::select('id', 'name')->orderBy('name')->get();
         $subcategories = Subcategory::select('id', 'name', 'category_id')->orderBy('name')->get();
@@ -77,7 +98,32 @@ class ProductController extends Controller
             return back()->withErrors(['subcategory_id' => 'زیردسته اول الزامی است.'])->withInput();
         }
 
-        // تولید slug
+        if (!empty($validated['slug']) && Product::where('slug', $validated['slug'])->exists()) {
+            return back()->withErrors(['slug' => 'این نامک (slug) قبلاً استفاده شده است.'])->withInput();
+        }
+        if (!empty($validated['sku']) && Product::where('sku', $validated['sku'])->exists()) {
+            return back()->withErrors(['sku' => 'این کد محصول (sku) قبلاً استفاده شده است.'])->withInput();
+        }
+
+        // ===== بررسی فیلد یکتا (is_unique) برای ادمین =====
+        $uniqueKey = CustomField::getUniqueFieldKeyForSubSubcategory($validated['sub_subcategory_id']);
+        if ($uniqueKey) {
+            $attributes = $validated['attributes'] ?? [];
+            $uniqueValue = $attributes[$uniqueKey] ?? null;
+            if ($uniqueValue) {
+                $exists = Product::where('sub_subcategory_id', $validated['sub_subcategory_id'])
+                    ->whereHas('attributes', function ($q) use ($uniqueKey, $uniqueValue) {
+                        $q->where('key', $uniqueKey)->where('value', (string)$uniqueValue);
+                    })
+                    ->whereIn('status', ['pending', 'approved'])
+                    ->exists();
+
+                if ($exists) {
+                    return back()->withInput()->with('error', 'یک محصول با این مشخصات (فیلد ' . $uniqueKey . ') قبلاً برای این نوع بازی ثبت شده است.');
+                }
+            }
+        }
+
         $slug = null;
         if (Schema::hasColumn('products', 'slug')) {
             $slug = $this->generateUniqueSlug($validated['name']);
@@ -87,8 +133,8 @@ class ProductController extends Controller
             'name'              => $validated['name'],
             'slug'              => $slug,
             'description'       => $validated['description'] ?? '',
-            'price'             => $validated['price'],
-            'discount_price'    => $validated['discount_price'] ?? null,
+            'price'             => $this->cleanPrice($validated['price']), // ✅ اصلاح قیمت
+            'discount_price'    => isset($validated['discount_price']) ? $this->cleanPrice($validated['discount_price']) : null,
             'quantity'          => $validated['quantity'] ?? 0,
             'category_id'       => $validated['category_id'],
             'subcategory_id'    => $validated['subcategory_id'],
@@ -105,18 +151,15 @@ class ProductController extends Controller
 
         $product = Product::create($productData);
 
-        // ذخیره تصویر اصلی
         if ($request->hasFile('cover')) {
             $product->cover = $request->file('cover')->store('products', 'public');
             $product->save();
         }
 
-        // ذخیره تگ‌ها
         if ($request->has('tags')) {
             $product->tags()->sync($request->tags);
         }
 
-        // ذخیره تصاویر اضافی (مدیا)
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
                 $path = $image->store('products_media', 'public');
@@ -130,7 +173,6 @@ class ProductController extends Controller
             }
         }
 
-        // ذخیره ویژگی‌های اختصاصی از فیلدهای custom fields (attributes)
         if ($request->has('attributes')) {
             $attributes = $request->input('attributes');
             if (is_array($attributes)) {
@@ -163,13 +205,20 @@ class ProductController extends Controller
     {
         $data = $request->validated();
 
+        if (!empty($data['slug']) && Product::where('slug', $data['slug'])->where('id', '!=', $product->id)->exists()) {
+            return back()->withErrors(['slug' => 'این نامک (slug) قبلاً استفاده شده است.'])->withInput();
+        }
+        if (!empty($data['sku']) && Product::where('sku', $data['sku'])->where('id', '!=', $product->id)->exists()) {
+            return back()->withErrors(['sku' => 'این کد محصول (sku) قبلاً استفاده شده است.'])->withInput();
+        }
+
         DB::transaction(function () use ($request, $product, $data) {
             $product->fill([
                 'name'              => $data['name'],
                 'slug'              => $data['slug'] ?? null,
                 'description'       => $data['description'] ?? '',
-                'price'             => $data['price'],
-                'discount_price'    => $data['discount_price'] ?? null,
+                'price'             => $this->cleanPrice($data['price']), // ✅ اصلاح قیمت
+                'discount_price'    => isset($data['discount_price']) ? $this->cleanPrice($data['discount_price']) : null,
                 'quantity'          => $data['quantity'] ?? 0,
                 'category_id'       => $data['category_id'],
                 'subcategory_id'    => $data['subcategory_id'],
@@ -196,15 +245,13 @@ class ProductController extends Controller
 
             $product->save();
 
-            // حذف همه ویژگی‌های قدیمی
             $product->attributes()->delete();
-            // همگام‌سازی تگ‌ها
             if ($request->has('tags')) {
                 $product->tags()->sync($request->tags);
             } else {
                 $product->tags()->detach();
             }
-            // 1. ذخیره ویژگی‌های اختصاصی (از فیلدهای custom fields که با attributes[key] می‌آیند)
+
             if ($request->has('attributes')) {
                 $attributes = $request->input('attributes');
                 if (is_array($attributes)) {
@@ -216,7 +263,6 @@ class ProductController extends Controller
                 }
             }
 
-            // 2. ذخیره ویژگی‌های دستی (attribute_keys[] و attribute_values[])
             if ($request->has('attribute_keys') && $request->has('attribute_values')) {
                 $keys = $request->input('attribute_keys');
                 $values = $request->input('attribute_values');
@@ -237,7 +283,6 @@ class ProductController extends Controller
             if ($product->cover) {
                 Storage::disk('public')->delete($product->cover);
             }
-            // حذف تمام فایل‌های مدیا
             foreach ($product->media as $media) {
                 Storage::disk('public')->delete($media->file_path);
                 $media->delete();
@@ -256,11 +301,9 @@ class ProductController extends Controller
         return back()->with('success', 'تصویر محصول با موفقیت حذف شد.');
     }
 
-    // حذف یک فایل رسانه به صورت AJAX
     public function destroyMedia($id)
     {
         $media = ProductMedia::findOrFail($id);
-        // مجوز: فقط ادمین یا مالک محصول
         if ($media->product->user_id != auth()->id() && !auth()->user()->isAdmin()) {
             return response()->json(['success' => false, 'message' => 'دسترسی غیرمجاز'], 403);
         }
@@ -293,7 +336,6 @@ class ProductController extends Controller
         return view('shop.product-single', compact('product', 'relatedProducts'));
     }
 
-    // AJAX methods for categories
     public function getSubcategories($categoryId)
     {
         $subcategories = Subcategory::where('category_id', $categoryId)->get();

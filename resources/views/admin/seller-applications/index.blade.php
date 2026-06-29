@@ -11,7 +11,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <style>
-        /* ===== تمام استایل‌های قبلی ===== */
+        /* ===== تمام استایل‌های قبلی (بدون تغییر) ===== */
         :root {
             --bg: #0f172a;
             --card: #111827;
@@ -508,7 +508,6 @@
             text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
         }
 
-        /* استایل مودال بزرگنمایی رسانه (بدون Lightbox) */
         .media-modal-content {
             background: transparent;
             border: none;
@@ -766,21 +765,30 @@
                                                                     <i class="fas fa-eye"></i>
                                                                 </button>
                                                                 @if ($prod->status === 'pending')
-                                                                    <form
-                                                                        action="{{ route('admin.products.approve', $prod) }}"
-                                                                        method="POST" style="display:inline;">
-                                                                        @csrf
-                                                                        <button type="submit"
-                                                                            class="btn-sm btn-success"
-                                                                            onclick="return confirm('آیا از تأیید این آگهی مطمئن هستید؟')">
-                                                                            <i class="fas fa-check"></i>
+                                                                    @if ($identityStatus === 'rejected')
+                                                                        <span class="badge-custom badge-rejected"
+                                                                            style="cursor:default;font-size:11px;">
+                                                                            <i class="fas fa-times-circle"></i> هویت رد
+                                                                            شده
+                                                                        </span>
+                                                                    @else
+                                                                        <form
+                                                                            action="{{ route('admin.products.approve', $prod) }}"
+                                                                            method="POST" style="display:inline;">
+                                                                            @csrf
+                                                                            <button type="submit"
+                                                                                class="btn-sm btn-success"
+                                                                                onclick="return confirm('آیا از تأیید این آگهی مطمئن هستید؟')">
+                                                                                <i class="fas fa-check"></i>
+                                                                            </button>
+                                                                        </form>
+                                                                        <button type="button"
+                                                                            class="btn-sm btn-danger"
+                                                                            data-bs-toggle="modal"
+                                                                            data-bs-target="#rejectProductModal{{ $prod->id }}">
+                                                                            <i class="fas fa-times"></i>
                                                                         </button>
-                                                                    </form>
-                                                                    <button type="button" class="btn-sm btn-danger"
-                                                                        data-bs-toggle="modal"
-                                                                        data-bs-target="#rejectProductModal{{ $prod->id }}">
-                                                                        <i class="fas fa-times"></i>
-                                                                    </button>
+                                                                    @endif
                                                                 @elseif($prod->status === 'approved')
                                                                     <span class="badge-custom badge-approved"
                                                                         style="cursor:default;font-size:11px;">

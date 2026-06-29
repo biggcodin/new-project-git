@@ -81,6 +81,10 @@ Route::prefix('user')->middleware('auth')->group(function () {
      // ----- حذف رسانه آگهی (برای کاربر عادی) -----
     Route::delete('/media/{media}', [UserController::class, 'destroyMedia'])->name('user.media.destroy');
 
+    // ----- ویرایش اطلاعات هویتی (در صورت رد شدن) -----
+    Route::get('/identity/edit', [UserController::class, 'editIdentity'])->name('user.identity.edit');
+    Route::put('/identity', [UserController::class, 'updateIdentity'])->name('user.identity.update');
+
     // ----- 🛒 سبد خرید (مدیریت آیتم‌ها) -----
     Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
     Route::post('/cart/{product}', [CartController::class, 'store'])->name('cart.store');

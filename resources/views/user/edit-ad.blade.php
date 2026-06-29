@@ -408,7 +408,8 @@
                             <div class="form-group">
                                 <label class="form-label">{{ $attr->key }}</label>
                                 <input type="text" name="attributes[{{ $attr->key }}]" class="form-input"
-                                    value="{{ $attr->value }}">
+                                    value="{{ $attr->value }}" style="direction:ltr; text-align:left;"
+                                    inputmode="numeric">
                             </div>
                         @endforeach
                     @else
@@ -428,13 +429,10 @@
                 <div class="row">
                     <div class="col-md-6 form-group">
                         <label class="form-label">قیمت (تومان) <span style="color:var(--danger);">*</span></label>
-                        <input type="number" name="price" class="form-input" min="0"
-                            value="{{ old('price', $product->price) }}" required>
-                    </div>
-                    <div class="col-md-6 form-group">
-                        <label class="form-label">موجودی <span style="color:var(--danger);">*</span></label>
-                        <input type="number" name="quantity" class="form-input" min="0"
-                            value="{{ old('quantity', $product->quantity) }}" required>
+                        {{-- تغییر type به text با inputmode=numeric برای جلوگیری از تغییر عدد --}}
+                        <input type="text" name="price" class="form-input" inputmode="numeric"
+                            value="{{ old('price', $product->price) }}" required
+                            style="direction:ltr; text-align:left;">
                     </div>
                 </div>
 
@@ -567,8 +565,9 @@
                             let value = existingAttrs[field.key] || '';
                             let inputHtml = '';
                             if (field.type === 'text' || field.type === 'number') {
+                                // ✅ تغییر: استفاده از type="text" و inputmode="numeric"
                                 inputHtml =
-                                    `<input type="${field.type}" name="attributes[${field.key}]" class="form-input" value="${value}" placeholder="${field.label}" ${field.required ? 'required' : ''}>`;
+                                    `<input type="text" name="attributes[${field.key}]" class="form-input" value="${value}" placeholder="${field.label}" ${field.required ? 'required' : ''} inputmode="numeric" style="direction:ltr; text-align:left;">`;
                             } else if (field.type === 'date') {
                                 inputHtml =
                                     `<input type="text" name="attributes[${field.key}]" class="form-input" value="${value}" placeholder="${field.label}" ${field.required ? 'required' : ''}>`;

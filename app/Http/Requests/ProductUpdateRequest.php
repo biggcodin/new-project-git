@@ -8,14 +8,28 @@ class ProductUpdateRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // یا اگر Policy دارید: $this->user()->can('update', $this->route('product'));
+        return true;
+    }
+
+    /**
+     * تبدیل فیلدهای خالی به null برای جلوگیری از خطاهای اعتبارسنجی
+     */
+    protected function prepareForValidation()
+    {
+        $this->merge([
+            'slug' => $this->slug ?: null,
+            'sku' => $this->sku ?: null,
+            'discount_price' => $this->discount_price !== '' ? $this->discount_price : null,
+        ]);
     }
 
     public function rules(): array
     {
+        $productId = $this->route('product')->id ?? null;
+
         return [
             'name'               => ['required', 'string', 'max:255'],
-            'slug'               => ['nullable', 'string', 'max:255'],
+            'slug'               => ['nullable', 'string', 'max:255', Rule::unique('products', 'slug')->ignore($productId)],
             'description'        => ['nullable', 'string'],
             'meta_title'         => ['nullable', 'string', 'max:255'],
             'meta_description'   => ['nullable', 'string', 'max:255'],
@@ -25,7 +39,7 @@ class ProductUpdateRequest extends FormRequest
             'category_id'        => ['required', 'integer', 'exists:categories,id'],
             'subcategory_id'     => ['nullable', 'integer', 'exists:subcategories,id'],
             'sub_subcategory_id' => ['nullable', 'integer', 'exists:sub_subcategories,id'],
-            'sku'                => ['nullable', 'string', 'max:100'],
+            'sku'                => ['nullable', 'string', 'max:100', Rule::unique('products', 'sku')->ignore($productId)],
             'cover'              => ['nullable', 'image', 'max:2048'],
             'status'             => ['required', Rule::in(['pending', 'approved', 'rejected'])],
             'featured'           => ['nullable', 'boolean'],
@@ -54,6 +68,8 @@ class ProductUpdateRequest extends FormRequest
             'status.required'         => 'وضعیت محصول الزامی است.',
             'images.*.mimes'          => 'فرمت فایل رسانه باید تصویر یا ویدیو باشد.',
             'images.*.max'            => 'حجم هر فایل رسانه نباید بیشتر از ۲۰ مگابایت باشد.',
+            'slug.unique'             => 'این نامک (slug) قبلاً استفاده شده است.',
+            'sku.unique'              => 'این کد محصول (sku) قبلاً استفاده شده است.',
         ];
     }
 }

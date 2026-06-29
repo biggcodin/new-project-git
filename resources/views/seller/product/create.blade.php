@@ -13,6 +13,7 @@
         rel="stylesheet" />
 
     <style>
+        /* ===== استایل‌های قبلی (بدون تغییر) ===== */
         :root {
             --bg: #0f172a;
             --card: #111827;
@@ -494,33 +495,29 @@
 
         @php
             $user = auth()->user();
-            // اگر کاربر فروشنده است، هویت را تأیید شده در نظر بگیر
-            $identityApproved = $identityApproved ?? $user->hasApprovedIdentity() || $user->isSeller();
-            $identityRejected = $identityRejected ?? false;
+            $showIdentityStep = $showIdentityStep ?? false;
             $identityData = $identityData ?? null;
-
-            $totalSteps = $identityApproved ? 2 : 3;
+            $totalSteps = $showIdentityStep ? 3 : 2;
         @endphp
 
         <!-- استپ‌ها -->
         <div class="wizard-steps">
             <div class="step-line"></div>
 
-            {{-- فقط در صورتی که هویت تأیید نشده باشد و کاربر فروشنده نباشد، مرحله اول نمایش داده شود --}}
-            @if (!$identityApproved && !auth()->user()->isSeller())
+            @if ($showIdentityStep)
                 <div class="step-item active" id="step-indicator-1">
                     <div class="step-circle">1</div>
                     <div class="step-title">احراز هویت</div>
                 </div>
             @endif
 
-            <div class="step-item {{ $identityApproved ? 'active' : '' }}" id="step-indicator-2">
-                <div class="step-circle">{{ $identityApproved ? '1' : '2' }}</div>
+            <div class="step-item {{ !$showIdentityStep ? 'active' : '' }}" id="step-indicator-2">
+                <div class="step-circle">{{ $showIdentityStep ? '2' : '1' }}</div>
                 <div class="step-title">اطلاعات اکانت</div>
             </div>
 
             <div class="step-item" id="step-indicator-3">
-                <div class="step-circle">{{ $identityApproved ? '2' : '3' }}</div>
+                <div class="step-circle">{{ $showIdentityStep ? '3' : '2' }}</div>
                 <div class="step-title">مرور و تایید</div>
             </div>
         </div>
@@ -528,22 +525,21 @@
         <form action="{{ route('seller.product.request.store') }}" method="POST" enctype="multipart/form-data"
             id="wizardForm">
             @csrf
-            <input type="hidden" name="identity_not_approved"
-                value="{{ $identityApproved || auth()->user()->isSeller() ? 0 : 1 }}">
+            <input type="hidden" name="identity_not_approved" value="{{ $showIdentityStep ? 1 : 0 }}">
 
             <div class="wizard-card">
 
-                <!-- ============ مرحله 1 (فقط در صورت عدم تأیید هویت و فروشنده نبودن) ============ -->
-                @if (!$identityApproved && !auth()->user()->isSeller())
+                <!-- ============ مرحله 1 (فقط در صورت نیاز به احراز هویت) ============ -->
+                @if ($showIdentityStep)
                     <div class="step-content active" id="step-1">
                         <h3 class="section-title" style="margin-top:0;">مرحله اول: احراز هویت فروشنده</h3>
                         <p style="color: var(--muted); margin-bottom:20px;">این اطلاعات فقط یک بار برای تأیید هویت شما
                             استفاده می‌شود.</p>
 
-                        @if ($identityRejected && $identityData)
+                        @if ($identityRejected ?? false)
                             <div class="alert alert-danger">
                                 <i class="fas fa-exclamation-circle"></i>
-                                درخواست هویت شما قبلاً رد شده است. دلیل: {{ $identityData->rejection_reason }}
+                                درخواست هویت شما قبلاً رد شده است. دلیل: {{ $identityData->rejection_reason ?? '' }}
                                 <br>لطفاً اطلاعات خود را ویرایش و مجدداً ارسال کنید.
                             </div>
                         @endif
@@ -616,8 +612,7 @@
                                         برای آپلود کلیک کنید
                                     @endif
                                 </div>
-                                <small style="color: var(--muted);">فرمت‌های مجاز: JPG, PNG (حداکثر ۲
-                                    مگابایت)</small>
+                                <small style="color: var(--muted);">فرمت‌های مجاز: JPG, PNG (حداکثر ۲ مگابایت)</small>
                             </div>
                             @if ($identityData && $identityData->national_card_image)
                                 <div style="margin-top:5px;font-size:12px;color:var(--muted);">
@@ -636,9 +631,9 @@
                     </div>
                 @endif
 
-                <!-- ============ مرحله 2: اطلاعات اکانت ============ -->
-                <div class="step-content {{ $identityApproved ? 'active' : '' }}" id="step-2">
-                    <h3 class="section-title" style="margin-top:0;">مرحله {{ $identityApproved ? 'اول' : 'دوم' }}:
+                <!-- ============ مرحله 2 (اطلاعات اکانت) ============ -->
+                <div class="step-content {{ !$showIdentityStep ? 'active' : '' }}" id="step-2">
+                    <h3 class="section-title" style="margin-top:0;">مرحله {{ $showIdentityStep ? 'دوم' : 'اول' }}:
                         اطلاعات اکانت</h3>
                     <p style="color: var(--muted); margin-bottom:20px;">مشخصات اکانت یا محصولی که می‌خواهید بفروشید را
                         وارد کنید.</p>
@@ -671,12 +666,7 @@
                     <div class="row">
                         <div class="col-md-6 form-group">
                             <label class="form-label">قیمت (تومان) <span style="color:var(--danger);">*</span></label>
-                            <input type="number" name="price" class="form-input" min="0" required>
-                        </div>
-                        <div class="col-md-6 form-group">
-                            <label class="form-label">موجودی <span style="color:var(--danger);">*</span></label>
-                            <input type="number" name="quantity" class="form-input" min="0" value="1"
-                                required>
+                            <input type="text" name="price" class="form-input" required inputmode="numeric">
                         </div>
                     </div>
 
@@ -721,23 +711,35 @@
                         <input type="hidden" name="tags" id="selected-tags" value="">
                     </div>
 
+                    <!-- ===== دکمه تست برای دیباگ ===== -->
+                    <div class="wizard-actions"
+                        style="border-top: 2px solid var(--accent); padding-top: 15px; margin-top: 10px;">
+                        <button type="button" class="btn btn-info" onclick="testStoreAndPopulate()"
+                            style="background: var(--accent-2); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: inherit; font-weight: 600;">
+                            <i class="fas fa-bug"></i> تست ذخیره و نمایش
+                        </button>
+                        <div style="font-size: 12px; color: var(--muted); align-self: center;">
+                            (برای دیباگ: اطلاعات را ذخیره و در مرحله ۳ نمایش می‌دهد)
+                        </div>
+                    </div>
+
                     <div class="wizard-actions">
-                        @if (!$identityApproved && !auth()->user()->isSeller())
+                        @if ($showIdentityStep)
                             <button type="button" class="btn btn-prev" onclick="changeStep(-1)">
                                 <i class="fas fa-arrow-right"></i> مرحله قبل
                             </button>
                         @else
                             <div></div>
                         @endif
-                        <button type="button" class="btn btn-next" onclick="changeStep(1)">
+                        <button type="button" class="btn btn-next" onclick="changeStep(1)" id="btn-step2-next">
                             مرحله بعد <i class="fas fa-arrow-left"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- ============ مرحله 3: مرور و تایید ============ -->
+                <!-- ============ مرحله 3 (مرور و تایید) ============ -->
                 <div class="step-content" id="step-3">
-                    <h3 class="section-title" style="margin-top:0;">مرحله {{ $identityApproved ? 'دوم' : 'سوم' }}:
+                    <h3 class="section-title" style="margin-top:0;">مرحله {{ $showIdentityStep ? 'سوم' : 'دوم' }}:
                         مرور و تایید نهایی</h3>
                     <p style="color: var(--muted); margin-bottom:20px;">لطفاً صحت تمام اطلاعات وارد شده را بررسی کنید.
                         پس از ارسال، درخواست شما برای ادمین ارسال می‌شود.</p>
@@ -746,63 +748,62 @@
                     <table class="review-table">
                         <tr>
                             <td>نام و نام خانوادگی</td>
-                            <td>
-                                @if ($identityApproved && $identityData)
+                            <td id="review-name">
+                                @if (!$showIdentityStep && $identityData)
                                     {{ $identityData->first_name }} {{ $identityData->last_name }}
                                 @else
-                                    <span id="review-name">-</span>
+                                    -
                                 @endif
                             </td>
                         </tr>
                         <tr>
                             <td>کد ملی</td>
-                            <td>
-                                @if ($identityApproved && $identityData)
+                            <td id="review-national-code">
+                                @if (!$showIdentityStep && $identityData)
                                     {{ $identityData->national_code }}
                                 @else
-                                    <span id="review-national-code">-</span>
+                                    -
                                 @endif
                             </td>
                         </tr>
                         <tr>
                             <td>شماره موبایل</td>
-                            <td>
-                                @if ($identityApproved && $identityData)
+                            <td id="review-phone">
+                                @if (!$showIdentityStep && $identityData)
                                     {{ $identityData->phone }}
                                 @else
-                                    <span id="review-phone">-</span>
+                                    -
                                 @endif
                             </td>
                         </tr>
                         <tr>
                             <td>شماره کارت</td>
-                            <td>
-                                @if ($identityApproved && $identityData)
+                            <td id="review-card">
+                                @if (!$showIdentityStep && $identityData)
                                     {{ $identityData->bank_card_number }}
                                 @else
-                                    <span id="review-card">-</span>
+                                    -
                                 @endif
                             </td>
                         </tr>
                         <tr>
                             <td>سن قانونی</td>
-                            <td>
-                                @if ($identityApproved && $identityData)
+                            <td id="review-adult">
+                                @if (!$showIdentityStep && $identityData)
                                     {{ $identityData->is_over_18 ? 'بله' : 'خیر' }}
                                 @else
-                                    <span id="review-adult">-</span>
+                                    -
                                 @endif
                             </td>
                         </tr>
                         <tr>
                             <td>تصویر کارت ملی</td>
-                            <td>
-                                @if ($identityApproved && $identityData && $identityData->national_card_image)
+                            <td id="review-id-card">
+                                @if (!$showIdentityStep && $identityData && $identityData->national_card_image)
                                     <span style="color:var(--success);"><i class="fas fa-check-circle"></i> آپلود
                                         شده</span>
                                 @else
-                                    <span id="review-id-card"><span style="color:var(--muted);">انتخاب
-                                            نشده</span></span>
+                                    <span style="color:var(--muted);">انتخاب نشده</span>
                                 @endif
                             </td>
                         </tr>
@@ -821,10 +822,6 @@
                         <tr>
                             <td>قیمت</td>
                             <td id="review-price">-</td>
-                        </tr>
-                        <tr>
-                            <td>موجودی</td>
-                            <td id="review-quantity">-</td>
                         </tr>
                         <tr>
                             <td>توضیحات</td>
@@ -862,6 +859,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/persian-datepicker/1.0.0/js/persian-datepicker.min.js"></script>
 
     <script>
+        // ===== متغیر سراسری =====
+        var storedProductData = {
+            game: '',
+            name: '',
+            price: '',
+            description: '',
+            tags: [],
+            customFields: {},
+            coverFile: '',
+            mediaFiles: []
+        };
+
         $(document).ready(function() {
             if (typeof persianDate !== 'undefined' && $.fn.persianDatepicker) {
                 $('#birth_date').persianDatepicker({
@@ -882,14 +891,37 @@
             if (selectedGame) {
                 loadCustomFields(selectedGame);
             }
+
+            // رویداد ذخیره اطلاعات هنگام کلیک روی دکمه "مرحله بعد"
+            $('#step-2 .btn-next').on('click', function(e) {
+                storeProductData();
+            });
         });
 
+        // ===== تابع تست =====
+        function testStoreAndPopulate() {
+            storeProductData();
+            alert('اطلاعات ذخیره شد! اکنون به مرحله ۳ بروید.');
+            if (currentStep === 3) {
+                setTimeout(function() {
+                    populateReviewData();
+                }, 100);
+            } else {
+                changeStep(1);
+            }
+        }
+
         // ===== مدیریت استپ‌ها =====
-        let currentStep = {{ $identityApproved ? 2 : 1 }};
-        const totalSteps = {{ $identityApproved ? 2 : 3 }};
+        let currentStep = {{ $showIdentityStep ? 1 : 2 }};
+        const totalSteps = {{ $showIdentityStep ? 3 : 2 }};
 
         function changeStep(direction) {
             if (direction === 1 && !validateStep(currentStep)) return;
+
+            // ذخیره اطلاعات قبل از تغییر استپ
+            if (direction === 1 && currentStep === 2) {
+                storeProductData();
+            }
 
             document.getElementById(`step-${currentStep}`).classList.remove('active');
             document.getElementById(`step-indicator-${currentStep}`).classList.remove('active');
@@ -914,8 +946,11 @@
                 prevBtn.style.visibility = currentStep === 1 ? 'hidden' : 'visible';
             }
 
+            // ✅ تاخیر ۴۰۰ میلی‌ثانیه برای اطمینان از بارگذاری کامل DOM
             if (currentStep === totalSteps) {
-                populateReviewData();
+                setTimeout(function() {
+                    populateReviewData();
+                }, 400);
             }
         }
 
@@ -967,14 +1002,68 @@
             return valid;
         }
 
+        // ===== ذخیره اطلاعات اکانت =====
+        function storeProductData() {
+            var gameSelect = document.querySelector('select[name="sub_subcategory_id"]');
+            storedProductData.game = gameSelect?.options[gameSelect.selectedIndex]?.text || '-';
+
+            var nameInput = document.querySelector('input[name="name"]');
+            storedProductData.name = nameInput?.value?.trim() || '-';
+
+            var priceInput = document.querySelector('input[name="price"]');
+            storedProductData.price = priceInput?.value || '-';
+
+            var descInput = document.querySelector('textarea[name="description"]');
+            storedProductData.description = descInput?.value?.trim() || 'ندارد';
+
+            var selectedTags = document.querySelectorAll('.tag-item.selected');
+            storedProductData.tags = Array.from(selectedTags).map(function(el) {
+                return el.innerText.trim();
+            });
+
+            // فیلدهای اختصاصی
+            var customFieldsContainer = document.getElementById('dynamic-fields-container');
+            var customFields = customFieldsContainer ? customFieldsContainer.querySelectorAll('.form-group') : [];
+            storedProductData.customFields = {};
+            customFields.forEach(function(group) {
+                var label = group.querySelector('.form-label')?.innerText?.trim() || '';
+                var input = group.querySelector('input, select, textarea');
+                var value = '-';
+                if (input) {
+                    if (input.tagName === 'SELECT') {
+                        value = input.options[input.selectedIndex]?.text || '-';
+                    } else if (input.type === 'file') {
+                        value = input.files.length > 0 ? input.files[0].name : 'هیچ فایلی انتخاب نشده';
+                    } else {
+                        value = input.value?.trim() || '-';
+                    }
+                }
+                var cleanLabel = label.replace(/\s*\*$/, '').trim();
+                storedProductData.customFields[cleanLabel] = value;
+            });
+
+            var coverInput = document.getElementById('cover');
+            storedProductData.coverFile = coverInput?.files?.length > 0 ? coverInput.files[0].name : '';
+
+            var mediaInput = document.getElementById('media');
+            storedProductData.mediaFiles = mediaInput?.files?.length > 0 ?
+                Array.from(mediaInput.files).map(function(f) {
+                    return f.name;
+                }) : [];
+
+            try {
+                localStorage.setItem('storedProductData', JSON.stringify(storedProductData));
+            } catch (e) {}
+        }
+
         // ===== توابع کمکی =====
         function updateFileName(input, displayId) {
-            const display = document.getElementById(displayId);
+            var display = document.getElementById(displayId);
             if (input.files && input.files.length > 0) {
                 if (input.files.length === 1) {
                     display.innerText = input.files[0].name;
                 } else {
-                    display.innerText = `${input.files.length} فایل انتخاب شد`;
+                    display.innerText = input.files.length + ' فایل انتخاب شد';
                 }
                 display.style.color = 'var(--success)';
             }
@@ -986,41 +1075,35 @@
         }
 
         function updateSelectedTags() {
-            const selected = document.querySelectorAll('.tag-item.selected');
-            const ids = Array.from(selected).map(el => el.dataset.id);
+            var selected = document.querySelectorAll('.tag-item.selected');
+            var ids = Array.from(selected).map(function(el) {
+                return el.dataset.id;
+            });
             document.getElementById('selected-tags').value = JSON.stringify(ids);
         }
 
-        // ===== بارگذاری فیلدهای اختصاصی (AJAX) =====
+        // ===== بارگذاری فیلدهای اختصاصی =====
         function loadCustomFields(subSubcategoryId) {
-            const container = document.getElementById('dynamic-fields-container');
+            var container = document.getElementById('dynamic-fields-container');
             if (!container) {
-                console.warn('⚠️ Container not found.');
                 return;
             }
             if (!subSubcategoryId) {
-                container.innerHTML = `
-                    <div class="alert alert-info" style="background:rgba(34,211,238,0.05); border-color:rgba(34,211,238,0.2);">
-                        <i class="fas fa-info-circle"></i> لطفاً ابتدا نوع بازی را انتخاب کنید.
-                    </div>
-                `;
+                container.innerHTML =
+                    '<div class="alert alert-info" style="background:rgba(34,211,238,0.05); border-color:rgba(34,211,238,0.2);"><i class="fas fa-info-circle"></i> لطفاً ابتدا نوع بازی را انتخاب کنید.</div>';
                 return;
             }
 
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
             if (!csrfToken) {
-                container.innerHTML = `<div class="alert alert-danger">توکن CSRF یافت نشد.</div>`;
+                container.innerHTML = '<div class="alert alert-danger">توکن CSRF یافت نشد.</div>';
                 return;
             }
 
-            container.innerHTML = `
-                <div style="text-align:center;padding:20px;color:var(--muted);">
-                    <i class="fas fa-spinner fa-spin" style="font-size:24px;"></i>
-                    <div style="margin-top:10px;">در حال بارگذاری فیلدهای اختصاصی...</div>
-                </div>
-            `;
+            container.innerHTML =
+                '<div style="text-align:center;padding:20px;color:var(--muted);"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><div style="margin-top:10px;">در حال بارگذاری فیلدهای اختصاصی...</div></div>';
 
-            const url = '{{ route('seller.product.request.getFields') }}' + '?sub_subcategory_id=' + encodeURIComponent(
+            var url = '{{ route('seller.product.request.getFields') }}' + '?sub_subcategory_id=' + encodeURIComponent(
                 subSubcategoryId);
 
             fetch(url, {
@@ -1031,43 +1114,46 @@
                         'Accept': 'application/json'
                     }
                 })
-                .then(response => {
+                .then(function(response) {
                     if (!response.ok) throw new Error('HTTP ' + response.status);
                     return response.json();
                 })
-                .then(data => {
-                    let html = '';
+                .then(function(data) {
+                    var html = '';
                     if (data.fields && data.fields.length > 0) {
-                        data.fields.forEach(field => {
-                            let inputHtml = '';
+                        data.fields.forEach(function(field) {
+                            var inputHtml = '';
                             if (field.type === 'text' || field.type === 'number') {
-                                inputHtml =
-                                    `<input type="${field.type}" name="attributes[${field.key}]" class="form-input" placeholder="${field.label}" ${field.required ? 'required' : ''}>`;
+                                inputHtml = '<input type="text" name="attributes[' + field.key +
+                                    ']" class="form-input" placeholder="' + field.label + '" ' +
+                                    (field.required ? 'required' : '') +
+                                    ' inputmode="numeric" style="direction:ltr; text-align:left;">';
                             } else if (field.type === 'date') {
-                                inputHtml =
-                                    `<input type="text" name="attributes[${field.key}]" class="form-input datepicker-custom" placeholder="${field.label}" ${field.required ? 'required' : ''}>`;
+                                inputHtml = '<input type="text" name="attributes[' + field.key +
+                                    ']" class="form-input datepicker-custom" placeholder="' + field
+                                    .label + '" ' + (field.required ? 'required' : '') + '>';
                             } else if (field.type === 'select') {
-                                let options = [];
+                                var options = [];
                                 try {
                                     options = JSON.parse(field.options || '[]');
                                 } catch (e) {
                                     options = [];
                                 }
-                                let opts = options.map(opt => `<option value="${opt}">${opt}</option>`).join(
-                                    '');
-                                inputHtml =
-                                    `<select name="attributes[${field.key}]" class="form-select" ${field.required ? 'required' : ''}><option value="">انتخاب کنید...</option>${opts}</select>`;
+                                var opts = options.map(function(opt) {
+                                    return '<option value="' + opt + '">' + opt + '</option>';
+                                }).join('');
+                                inputHtml = '<select name="attributes[' + field.key +
+                                    ']" class="form-select" ' + (field.required ? 'required' : '') +
+                                    '><option value="">انتخاب کنید...</option>' + opts + '</select>';
                             }
-                            html += `
-                            <div class="form-group">
-                                <label class="form-label">${field.label} ${field.required ? '<span style="color:var(--danger);">*</span>' : ''}</label>
-                                ${inputHtml}
-                            </div>
-                        `;
+                            html += '<div class="form-group"><label class="form-label">' + field.label +
+                                (field.required ? ' <span style="color:var(--danger);">*</span>' :
+                                    '') +
+                                '</label>' + inputHtml + '</div>';
                         });
                     } else {
                         html =
-                            `<div class="alert alert-info" style="background:rgba(34,211,238,0.05); border-color:rgba(34,211,238,0.2);">هیچ فیلد اختصاصی برای این بازی تعریف نشده است.</div>`;
+                            '<div class="alert alert-info" style="background:rgba(34,211,238,0.05); border-color:rgba(34,211,238,0.2);">هیچ فیلد اختصاصی برای این بازی تعریف نشده است.</div>';
                     }
                     container.innerHTML = html;
 
@@ -1083,121 +1169,161 @@
                         });
                     }
                 })
-                .catch(error => {
-                    console.error('❌ Fetch Error:', error);
-                    container.innerHTML = `
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-circle"></i> خطا در بارگذاری فیلدهای اختصاصی.
-                        <br><small style="color:var(--muted);">${error.message}</small>
-                    </div>
-                `;
+                .catch(function(error) {
+                    container.innerHTML =
+                        '<div class="alert alert-danger"><i class="fas fa-exclamation-circle"></i> خطا در بارگذاری فیلدهای اختصاصی.</div>';
                 });
         }
 
-        // ===== پر کردن داده‌های مرحله مرور =====
+        // ===== تابع اصلی پر کردن مرحله مرور =====
         function populateReviewData() {
-            const form = document.getElementById('wizardForm');
-            if (!form) return;
-            const data = new FormData(form);
+            var showIdentityStep = {{ $showIdentityStep ? 'true' : 'false' }};
 
-            // اگر هویت قبلاً تأیید نشده، مقادیر را از فرم بخوان
-            const identityApproved = {{ $identityApproved ? 'true' : 'false' }};
-            if (!identityApproved) {
-                document.getElementById('review-name').innerText =
-                    `${data.get('first_name') || ''} ${data.get('last_name') || ''}`.trim() || '-';
-                document.getElementById('review-national-code').innerText = data.get('national_code') || '-';
-                document.getElementById('review-phone').innerText = data.get('phone') || '-';
-                document.getElementById('review-card').innerText = data.get('card_number') || '-';
-                document.getElementById('review-adult').innerText = data.get('is_adult') === 'yes' ? 'بله' : 'خیر';
-            }
-
-            // اطلاعات اکانت (همیشه از فرم)
-            const gameSelect = document.getElementById('sub_subcategory_id');
-            const gameText = gameSelect?.options[gameSelect.selectedIndex]?.text || '-';
-            document.getElementById('review-game').innerText = gameText;
-            document.getElementById('review-product-name').innerText = data.get('name') || '-';
-            const price = data.get('price');
-            document.getElementById('review-price').innerText = price ? Number(price).toLocaleString() + ' تومان' : '-';
-            document.getElementById('review-quantity').innerText = data.get('quantity') || '-';
-            document.getElementById('review-description').innerText = data.get('description') || 'ندارد';
-
-            // تگ‌ها
-            const selectedTags = document.querySelectorAll('.tag-item.selected');
-            const tagNames = Array.from(selectedTags).map(el => el.innerText.trim());
-            document.getElementById('review-tags').innerText = tagNames.length ? tagNames.join('، ') : 'ندارد';
-
-            // فیلدهای اختصاصی
-            const customFieldsContainer = document.getElementById('dynamic-fields-container');
-            const customFields = customFieldsContainer?.querySelectorAll('.form-group') || [];
-            let customHtml = '';
-            if (customFields.length > 0) {
-                customFields.forEach(group => {
-                    const label = group.querySelector('.form-label')?.innerText?.trim() || '';
-                    const input = group.querySelector('input, select, textarea');
-                    let value = '-';
-                    if (input) {
-                        if (input.tagName === 'SELECT') {
-                            value = input.options[input.selectedIndex]?.text || '-';
-                        } else if (input.type === 'file') {
-                            value = input.files.length > 0 ? input.files[0].name : 'هیچ فایلی انتخاب نشده';
-                        } else {
-                            value = input.value || '-';
+            // اگر storedProductData خالی است، از localStorage یا DOM بخوان
+            if (!storedProductData.name || storedProductData.name === '-') {
+                try {
+                    var saved = localStorage.getItem('storedProductData');
+                    if (saved) {
+                        var parsed = JSON.parse(saved);
+                        if (parsed && parsed.name) {
+                            storedProductData = parsed;
                         }
                     }
-                    const cleanLabel = label.replace(/\s*\*$/, '').trim();
-                    customHtml += `<tr><td>${cleanLabel}</td><td>${value}</td></tr>`;
+                } catch (e) {}
+
+                // اگر باز هم خالی بود، از DOM بخوان
+                if (!storedProductData.name || storedProductData.name === '-') {
+                    var nameInput = document.querySelector('input[name="name"]');
+                    if (nameInput && nameInput.value) {
+                        storedProductData.name = nameInput.value.trim();
+                        storedProductData.price = document.querySelector('input[name="price"]')?.value || '-';
+                        storedProductData.description = document.querySelector('textarea[name="description"]')?.value
+                            ?.trim() || 'ندارد';
+                        var gameSelect = document.querySelector('select[name="sub_subcategory_id"]');
+                        storedProductData.game = gameSelect?.options[gameSelect.selectedIndex]?.text || '-';
+                        var selectedTags = document.querySelectorAll('.tag-item.selected');
+                        storedProductData.tags = Array.from(selectedTags).map(function(el) {
+                            return el.innerText.trim();
+                        });
+                        var customFieldsContainer = document.getElementById('dynamic-fields-container');
+                        var customFields = customFieldsContainer ? customFieldsContainer.querySelectorAll('.form-group') :
+                        [];
+                        storedProductData.customFields = {};
+                        customFields.forEach(function(group) {
+                            var label = group.querySelector('.form-label')?.innerText?.trim() || '';
+                            var input = group.querySelector('input, select, textarea');
+                            var value = '-';
+                            if (input) {
+                                if (input.tagName === 'SELECT') {
+                                    value = input.options[input.selectedIndex]?.text || '-';
+                                } else if (input.type === 'file') {
+                                    value = input.files.length > 0 ? input.files[0].name : 'هیچ فایلی انتخاب نشده';
+                                } else {
+                                    value = input.value?.trim() || '-';
+                                }
+                            }
+                            var cleanLabel = label.replace(/\s*\*$/, '').trim();
+                            storedProductData.customFields[cleanLabel] = value;
+                        });
+                        var coverInput = document.getElementById('cover');
+                        storedProductData.coverFile = coverInput?.files?.length > 0 ? coverInput.files[0].name : '';
+                        var mediaInput = document.getElementById('media');
+                        storedProductData.mediaFiles = mediaInput?.files?.length > 0 ?
+                            Array.from(mediaInput.files).map(function(f) {
+                                return f.name;
+                            }) : [];
+                    }
+                }
+            }
+
+            // ----- اطلاعات هویتی -----
+            if (showIdentityStep) {
+                var firstName = document.querySelector('input[name="first_name"]')?.value || '';
+                var lastName = document.querySelector('input[name="last_name"]')?.value || '';
+                var nationalCode = document.querySelector('input[name="national_code"]')?.value || '';
+                var phone = document.querySelector('input[name="phone"]')?.value || '';
+                var cardNumber = document.querySelector('input[name="card_number"]')?.value || '';
+                var isAdult = document.querySelector('input[name="is_adult"]:checked')?.value || '';
+                var idCardInput = document.getElementById('id_card');
+
+                document.getElementById('review-name').innerText = (firstName + ' ' + lastName).trim() || '-';
+                document.getElementById('review-national-code').innerText = nationalCode || '-';
+                document.getElementById('review-phone').innerText = phone || '-';
+                document.getElementById('review-card').innerText = cardNumber || '-';
+                document.getElementById('review-adult').innerText = isAdult === 'yes' ? 'بله' : 'خیر';
+
+                if (idCardInput && idCardInput.files && idCardInput.files.length > 0) {
+                    document.getElementById('review-id-card').innerHTML =
+                        '<span style="color:var(--success);"><i class="fas fa-check-circle"></i> ' + idCardInput
+                        .files[0].name + '</span>';
+                } else {
+                    document.getElementById('review-id-card').innerHTML =
+                        '<span style="color:var(--muted);">انتخاب نشده</span>';
+                }
+            }
+
+            // ----- اطلاعات اکانت (از storedProductData) -----
+            document.getElementById('review-game').innerText = storedProductData.game || '-';
+            document.getElementById('review-product-name').innerText = storedProductData.name || '-';
+
+            var price = storedProductData.price;
+            document.getElementById('review-price').innerText = price ?
+                Number(price.replace(/,/g, '')).toLocaleString() + ' تومان' :
+                '-';
+
+            document.getElementById('review-description').innerText = storedProductData.description || 'ندارد';
+
+            document.getElementById('review-tags').innerText = storedProductData.tags.length ? storedProductData.tags.join(
+                '، ') : 'ندارد';
+
+            // فیلدهای اختصاصی
+            var customKeys = Object.keys(storedProductData.customFields);
+            var customHtml = '';
+            if (customKeys.length > 0) {
+                customKeys.forEach(function(key) {
+                    customHtml += '<tr><td>' + key + '</td><td>' + storedProductData.customFields[key] +
+                        '</td></tr>';
                 });
             }
 
-            const existingCustomTable = document.getElementById('review-custom-fields-table');
+            var existingCustomTable = document.getElementById('review-custom-fields-table');
             if (existingCustomTable) existingCustomTable.remove();
 
             if (customHtml) {
-                const container = document.getElementById('review-custom-fields-container');
-                const table = document.createElement('table');
-                table.id = 'review-custom-fields-table';
-                table.className = 'review-table';
-                table.innerHTML = `
-                    <thead>
-                        <tr>
-                            <th style="color:var(--muted);font-weight:600;padding:8px 15px;border-bottom:1px solid var(--border);text-align:right;">فیلد اختصاصی</th>
-                            <th style="color:var(--muted);font-weight:600;padding:8px 15px;border-bottom:1px solid var(--border);text-align:left;">مقدار</th>
-                        </tr>
-                    </thead>
-                    <tbody>${customHtml}</tbody>
-                `;
-                container.appendChild(table);
+                var container = document.getElementById('review-custom-fields-container');
+                if (container) {
+                    var table = document.createElement('table');
+                    table.id = 'review-custom-fields-table';
+                    table.className = 'review-table';
+                    table.innerHTML =
+                        '<thead><tr><th style="color:var(--muted);font-weight:600;padding:8px 15px;border-bottom:1px solid var(--border);text-align:right;">فیلد اختصاصی</th><th style="color:var(--muted);font-weight:600;padding:8px 15px;border-bottom:1px solid var(--border);text-align:left;">مقدار</th></tr></thead><tbody>' +
+                        customHtml + '</tbody>';
+                    container.appendChild(table);
+                }
             }
 
             // تصاویر و رسانه‌ها
-            const coverInput = document.getElementById('cover');
-            const mediaInput = document.getElementById('media');
-            let mediaHtml = '';
-
-            if (coverInput?.files?.length > 0) {
-                mediaHtml += `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-                    <span style="background:rgba(16,185,129,0.1);padding:5px 14px;border-radius:6px;border:1px solid rgba(16,185,129,0.2);">
-                        <i class="fas fa-image" style="color:var(--success);"></i> کاور: ${coverInput.files[0].name}
-                    </span>
-                </div>`;
+            var mediaHtml = '';
+            if (storedProductData.coverFile) {
+                mediaHtml +=
+                    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;"><span style="background:rgba(16,185,129,0.1);padding:5px 14px;border-radius:6px;border:1px solid rgba(16,185,129,0.2);"><i class="fas fa-image" style="color:var(--success);"></i> کاور: ' +
+                    storedProductData.coverFile + '</span></div>';
             }
 
-            if (mediaInput?.files?.length > 0) {
-                let mediaNames = Array.from(mediaInput.files).map(f => f.name).join('، ');
-                mediaHtml += `<div style="display:flex;gap:10px;flex-wrap:wrap;">
-                    <span style="background:rgba(167,139,250,0.1);padding:5px 14px;border-radius:6px;border:1px solid rgba(167,139,250,0.2);">
-                        <i class="fas fa-photo-video" style="color:var(--accent-2);"></i> مدیا (${mediaInput.files.length} فایل): ${mediaNames}
-                    </span>
-                </div>`;
+            if (storedProductData.mediaFiles.length > 0) {
+                mediaHtml +=
+                    '<div style="display:flex;gap:10px;flex-wrap:wrap;"><span style="background:rgba(167,139,250,0.1);padding:5px 14px;border-radius:6px;border:1px solid rgba(167,139,250,0.2);"><i class="fas fa-photo-video" style="color:var(--accent-2);"></i> مدیا (' +
+                    storedProductData.mediaFiles.length + ' فایل): ' + storedProductData.mediaFiles.join('، ') +
+                    '</span></div>';
             }
 
-            const mediaSection = document.getElementById('review-media-section');
-            const mediaContent = document.getElementById('review-media-content');
+            var mediaSection = document.getElementById('review-media-section');
+            var mediaContent = document.getElementById('review-media-content');
             if (mediaHtml) {
-                mediaSection.style.display = 'block';
-                mediaContent.innerHTML = mediaHtml;
+                if (mediaSection) mediaSection.style.display = 'block';
+                if (mediaContent) mediaContent.innerHTML = mediaHtml;
             } else {
-                mediaSection.style.display = 'none';
+                if (mediaSection) mediaSection.style.display = 'none';
             }
         }
     </script>
